@@ -128,8 +128,25 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 
 /* centre: preview */
 .center{grid-area:center;display:flex;flex-direction:column;background:var(--bg)}
-.stage{flex:1;min-height:0;margin:14px 14px 0;border-radius:var(--r);background:var(--stage);position:relative;overflow:hidden;display:grid;place-items:center}
-.stage video{width:100%;height:100%;object-fit:contain;display:block}
+.stage{flex:1;min-height:0;margin:14px 14px 0;border-radius:var(--r);background:var(--stage);position:relative;overflow:hidden}
+/* Absolutely positioned so the stage, not the video's own pixel size, sets the
+   box; object-fit then letterboxes the whole frame into it. */
+.stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.cropzone{position:absolute;overflow:hidden;pointer-events:none}
+.cropframe{position:absolute;border:2px solid var(--clip);box-shadow:0 0 0 9999px rgba(0,0,0,.6);pointer-events:auto;touch-action:none;border-radius:2px}
+.cropframe.drag-x{cursor:ew-resize}
+.cropframe.drag-y{cursor:ns-resize}
+.cropframe::before,.cropframe::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg,transparent calc(33.33% - .5px),rgba(255,255,255,.28) calc(33.33% - .5px) calc(33.33% + .5px),transparent calc(33.33% + .5px) calc(66.66% - .5px),rgba(255,255,255,.28) calc(66.66% - .5px) calc(66.66% + .5px),transparent calc(66.66% + .5px))}
+.cropframe::after{background:linear-gradient(180deg,transparent calc(33.33% - .5px),rgba(255,255,255,.28) calc(33.33% - .5px) calc(33.33% + .5px),transparent calc(33.33% + .5px) calc(66.66% - .5px),rgba(255,255,255,.28) calc(66.66% - .5px) calc(66.66% + .5px),transparent calc(66.66% + .5px));transform:none}
+.cropframe .tag{position:absolute;top:6px;left:50%;transform:translateX(-50%);font:600 10.5px var(--ui);background:var(--clip);color:var(--clip-ink);padding:2px 8px;border-radius:10px;white-space:nowrap}
+.ratios{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.ratios label{cursor:pointer;position:relative}
+.ratios input{position:absolute;opacity:0;pointer-events:none}
+.ratios span{display:grid;justify-items:center;gap:5px;padding:8px 2px 6px;border-radius:var(--r);border:1px solid var(--line);background:var(--panel-2);font-size:11px;font-weight:600;color:var(--muted)}
+.ratios i{display:block;border:1.5px solid currentColor;border-radius:2px}
+.ratios input:checked + span{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
+.ratios input:focus-visible + span{outline:2px solid var(--accent)}
 .vid-error{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#ddd;font-size:13px;background:rgba(0,0,0,.75)}
 .drop{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:14px;padding:24px;text-align:center;cursor:pointer;
   border:1.5px dashed var(--line);border-radius:var(--r);background:var(--panel);transition:border-color .15s,background .15s}
@@ -233,7 +250,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
     grid-template-areas:"top" "center" "tl" "left" "right"}
   .top{padding:10px 16px;flex-wrap:wrap}
   .file{order:3;flex-basis:100%;justify-content:flex-start}
-  .stage{aspect-ratio:16/9;flex:none;margin:12px 16px 0;max-width:100%}
+  .stage{aspect-ratio:var(--va,16/9);max-height:70vh;flex:none;margin:12px 16px 0;max-width:100%}
   .controls{grid-template-columns:1fr auto;padding:10px 16px 4px}
   .controls .transport{grid-column:1 / -1;grid-row:2;justify-content:center;flex-wrap:wrap}
   .tl{height:220px}
@@ -287,6 +304,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
   <main class="center">
     <div class="stage" id="stage">
       <video id="video" playsinline preload="auto"></video>
+      <div class="cropzone" id="cropZone" hidden><div class="cropframe" id="cropFrame"><span class="tag" id="cropTag"></span></div></div>
       <span class="over-badge num" id="clipBadge" hidden></span>
       <div class="vid-error" id="vidError" hidden>This browser can’t preview this video’s format. It’s often iPhone HEVC footage in Chrome on Windows. Try Safari, or set the iPhone camera format to “Most Compatible”.</div>
       <label class="drop" id="drop" for="fileInput">
@@ -338,6 +356,21 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
         <label><input type="radio" name="mode" value="join" id="modeJoin"><span>One video</span></label>
       </div>
       <span class="sub" id="modeDesc"></span>
+    </div>
+    <div class="sec">
+      <span class="label">Aspect ratio</span>
+      <div class="ratios" role="radiogroup" aria-label="Aspect ratio">
+        <label><input type="radio" name="ratio" value="original" id="r-original" checked><span><i style="width:18px;height:13px;border-style:dashed"></i>Original</span></label>
+        <label><input type="radio" name="ratio" value="9:16" id="r-916"><span><i style="width:9px;height:16px"></i>9:16</span></label>
+        <label><input type="radio" name="ratio" value="4:5" id="r-45"><span><i style="width:12px;height:15px"></i>4:5</span></label>
+        <label><input type="radio" name="ratio" value="1:1" id="r-11"><span><i style="width:14px;height:14px"></i>1:1</span></label>
+        <label><input type="radio" name="ratio" value="16:9" id="r-169"><span><i style="width:20px;height:11px"></i>16:9</span></label>
+      </div>
+      <div class="seg" role="radiogroup" aria-label="Framing" id="fitSeg" hidden>
+        <label><input type="radio" name="fit" value="crop" id="fitCrop" checked><span>Crop to fill</span></label>
+        <label><input type="radio" name="fit" value="pad" id="fitPad"><span>Fit with bars</span></label>
+      </div>
+      <span class="sub" id="ratioDesc"></span>
     </div>
     <div class="sec">
       <label class="label" for="quality">Quality</label>
@@ -476,6 +509,8 @@ async function openFile(file){
   loadEngine().catch(() => {}); // warm up in the background; errors surface on export
 }
 video.addEventListener('loadedmetadata', () => {
+  document.querySelector('.stage').style.setProperty('--va', `${video.videoWidth || 16}/${video.videoHeight || 9}`);
+  requestAnimationFrame(layoutCrop);
   state.duration = video.duration;
   $('#tDur').textContent = fmt(state.duration);
   $('#tlEmpty').hidden = true; $('#playhead').hidden = false;
@@ -855,11 +890,89 @@ const QUALITY = {
 function scaleFilter(h){
   return `scale=w='if(gt(iw,ih),-2,min(${h},iw))':h='if(gt(iw,ih),min(${h},ih),-2)'`;
 }
-const showQDesc = () => { $('#qDesc').textContent = (QUALITY[$('#quality').value] || QUALITY.original).desc; };
-$('#quality').addEventListener('change', showQDesc); showQDesc();
+const showQDesc = () => {
+  const v = $('#quality').value;
+  $('#qDesc').textContent = v === 'original' && crop.ratio !== 'original'
+    ? 'Changing the aspect ratio needs a re-encode, so this exports at High quality with frame-accurate cuts.'
+    : (QUALITY[v] || QUALITY.original).desc;
+};
+$('#quality').addEventListener('change', showQDesc); // first run happens in syncRatioUI()
 const MODE_DESC = { separate:'One video file for each ticked clip.', join:'The ticked clips back to back, in list order.' };
 const showModeDesc = () => { $('#modeDesc').textContent = MODE_DESC[document.querySelector('input[name=mode]:checked').value]; };
 document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', showModeDesc)); showModeDesc();
+
+/* ── aspect ratio & framing ──
+   crop.ox / crop.oy (0–1) say where the crop window sits along the axis that
+   gets trimmed; 0.5 is centred. The overlay on the preview edits them. */
+const crop = { ratio:'original', fit:'crop', ox:0.5, oy:0.5 };
+try{ Object.assign(crop, JSON.parse(localStorage.getItem('clipcutter-crop') || '{}')); }catch(e){}
+const saveCrop = () => { try{ localStorage.setItem('clipcutter-crop', JSON.stringify(crop)); }catch(e){} };
+const ratioNum = r => { const [a,b] = r.split(':').map(Number); return a/b; };
+const srcSize = () => ({ w: video.videoWidth, h: video.videoHeight });
+// H.264 4:2:0 needs even sizes and offsets. Crops round down so they fit
+// inside the frame; pads round up so the picture fits inside them.
+const evenDown = n => Math.max(2, Math.floor(n/2)*2), evenUp = n => Math.ceil(n/2)*2;
+function cropRect(){ // in source pixels
+  const { w, h } = srcSize(), R = ratioNum(crop.ratio);
+  if(w/h > R){ const cw = evenDown(h*R); return { w:cw, h:evenDown(h), x:evenDown((w-cw)*crop.ox), y:0, axis:'x' }; }
+  const ch = evenDown(w/R); return { w:evenDown(w), h:ch, x:0, y:evenDown((h-ch)*crop.oy), axis:'y' };
+}
+function frameFilters(){
+  if(crop.ratio === 'original' || !video.videoWidth) return [];
+  const { w, h } = srcSize(), R = ratioNum(crop.ratio);
+  if(crop.fit === 'crop'){ const r = cropRect(); return [`crop=${r.w}:${r.h}:${r.x}:${r.y}`]; }
+  // Keep the source's short side as the output's short side, so a 1080×1920
+  // clip padded to 16:9 becomes 1920×1080, not a 3414×1920 frame of mostly bars.
+  const S = evenDown(Math.min(w,h));
+  const W = R >= 1 ? evenUp(S*R) : S, H = R >= 1 ? S : evenUp(S/R);
+  return [`scale=${W}:${H}:force_original_aspect_ratio=decrease:force_divisible_by=2`,
+          `pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:black`, 'setsar=1'];
+}
+function layoutCrop(){
+  const zone = $('#cropZone'), stage = $('#stage');
+  const show = crop.ratio !== 'original' && crop.fit === 'crop' && video.videoWidth;
+  zone.hidden = !show;
+  if(!show) return;
+  const { w, h } = srcSize(), sw = stage.clientWidth, sh = stage.clientHeight;
+  const k = Math.min(sw/w, sh/h), dw = w*k, dh = h*k;
+  Object.assign(zone.style, { left:(sw-dw)/2+'px', top:(sh-dh)/2+'px', width:dw+'px', height:dh+'px' });
+  const r = cropRect(), f = $('#cropFrame');
+  Object.assign(f.style, { left:r.x*k+'px', top:r.y*k+'px', width:r.w*k+'px', height:r.h*k+'px' });
+  f.className = 'cropframe ' + (r.axis === 'x' ? 'drag-x' : 'drag-y');
+  const movable = r.axis === 'x' ? r.w < w - 2 : r.h < h - 2;
+  $('#cropTag').textContent = movable ? `${crop.ratio} · drag to frame` : crop.ratio;
+}
+new ResizeObserver(layoutCrop).observe($('#stage'));
+let cropDrag = null;
+$('#cropFrame').addEventListener('pointerdown', e => {
+  const r = cropRect(), { w, h } = srcSize();
+  cropDrag = { x:e.clientX, y:e.clientY, ox:crop.ox, oy:crop.oy, axis:r.axis,
+    span: r.axis === 'x' ? (w - r.w) : (h - r.h), k: $('#cropZone').clientWidth / w };
+  e.currentTarget.setPointerCapture(e.pointerId); e.preventDefault();
+});
+$('#cropFrame').addEventListener('pointermove', e => {
+  if(!cropDrag || cropDrag.span <= 0) return;
+  if(cropDrag.axis === 'x') crop.ox = clamp(cropDrag.ox + (e.clientX - cropDrag.x) / (cropDrag.span*cropDrag.k), 0, 1);
+  else crop.oy = clamp(cropDrag.oy + (e.clientY - cropDrag.y) / (cropDrag.span*cropDrag.k), 0, 1);
+  layoutCrop();
+});
+const endCrop = () => { if(cropDrag){ cropDrag = null; saveCrop(); } };
+$('#cropFrame').addEventListener('pointerup', endCrop);
+$('#cropFrame').addEventListener('pointercancel', endCrop);
+function syncRatioUI(){
+  document.querySelector(`input[name=ratio][value="${crop.ratio}"]`).checked = true;
+  document.querySelector(`input[name=fit][value="${crop.fit}"]`).checked = true;
+  $('#fitSeg').hidden = crop.ratio === 'original';
+  $('#ratioDesc').textContent = crop.ratio === 'original'
+    ? 'Keeps the video’s own shape.'
+    : crop.fit === 'crop'
+      ? `Trims the picture to ${crop.ratio}. Drag the frame on the video to choose what stays in the shot. Re-encodes, so it’s slower than Original quality.`
+      : `Keeps the whole picture and adds black bars to make it ${crop.ratio}. Re-encodes, so it’s slower than Original quality.`;
+  layoutCrop(); showQDesc();
+}
+document.querySelectorAll('input[name=ratio]').forEach(r => r.addEventListener('change', () => { crop.ratio = r.value; crop.ox = crop.oy = 0.5; saveCrop(); syncRatioUI(); }));
+document.querySelectorAll('input[name=fit]').forEach(r => r.addEventListener('change', () => { crop.fit = r.value; saveCrop(); syncRatioUI(); }));
+syncRatioUI();
 
 /* ── engine ── */
 async function blobURL(url, type, onProgress){
@@ -956,7 +1069,9 @@ $('#exportBtn').addEventListener('click', async () => {
   if(!picked.length || busy) return;
   const mode = document.querySelector('input[name=mode]:checked').value;
   const q = QUALITY[$('#quality').value] || QUALITY.original;
-  const reencode = q.crf != null;
+  const vf = [...frameFilters(), ...(q.height ? [scaleFilter(q.height)] : [])];
+  const reencode = q.crf != null || vf.length > 0;
+  const crf = q.crf ?? QUALITY.high.crf;
   const srcExt = (state.file.name.match(/\.[a-z0-9]+$/i)?.[0] || '.mp4').toLowerCase();
   const ext = reencode ? '.mp4' : (['.mov','.mp4','.m4v','.webm','.mkv'].includes(srcExt) ? srcExt : '.mp4');
   const mime = ext === '.webm' ? 'video/webm' : ext === '.mov' ? 'video/quicktime' : ext === '.mkv' ? 'video/x-matroska' : 'video/mp4';
@@ -987,8 +1102,8 @@ $('#exportBtn').addEventListener('click', async () => {
         const dur = (c.end - c.start).toFixed(3);
         const args = reencode
           ? ['-ss', c.start.toFixed(3), '-i', inp, '-t', dur, '-map','0:v:0?','-map','0:a:0?',
-             ...(q.height ? ['-vf', scaleFilter(q.height)] : []),
-             '-c:v','libx264','-preset','veryfast','-crf',String(q.crf),'-pix_fmt','yuv420p',
+             ...(vf.length ? ['-vf', vf.join(',')] : []),
+             '-c:v','libx264','-preset','veryfast','-crf',String(crf),'-pix_fmt','yuv420p',
              '-c:a','aac','-b:a','160k', ...faststart, out]
           : ['-ss', c.start.toFixed(3), '-i', inp, '-t', dur, '-map','0:v:0?','-map','0:a:0?',
              '-c','copy','-avoid_negative_ts','make_zero', ...faststart, out];

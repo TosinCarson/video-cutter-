@@ -13,6 +13,10 @@ A browser tool for cutting videos into clips.
 
 Cutting runs in your browser with [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm), so videos are never uploaded. The first visit downloads the engine (about 31 MB) from jsDelivr, and the browser caches it after that.
 
+**Aspect ratio**
+
+Export as Original, 9:16, 4:5, 1:1 or 16:9. **Crop to fill** trims the picture; drag the frame on the preview to choose what stays in the shot. **Fit with bars** keeps the whole picture and adds black bars. Either one re-encodes the video.
+
 **Export quality**
 
 - **Original:** copies the video as it is, so it takes seconds with no quality loss. Cuts snap to the nearest keyframe, so a clip can start up to about a second early.
