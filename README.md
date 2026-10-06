@@ -1,12 +1,12 @@
 # Clip Cutter
 
-A browser tool for cutting haircut tutorial videos into clips.
+A browser tool for cutting videos into clips.
 
 1. Open `index.html` from a web address (GitHub Pages, or a local server such as `python3 -m http.server`). Double-clicking the file won't work, because the video engine only loads over http(s).
 2. Drop in a video (MP4, MOV or WebM, up to about 150 MB).
 3. Add clips either way:
    - Press **I** where a section starts and **O** where it ends.
-   - Type times into **Add clips by time**, for example `1:14-1:28 Sectioning, 2:16-2:29 Blend the fade`. Use commas or new lines between clips; the name is optional.
+   - Type times into **Add clips by time**, for example `1:14-1:28 Intro, 2:16-2:29 Step one`. Use commas or new lines between clips; the name is optional.
 
    Name, adjust, reorder or delete clips in the list.
 4. Tick the clips you want and export them as separate files or as one joined video.

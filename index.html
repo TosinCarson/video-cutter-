@@ -3,22 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clip Cutter — Learn to Cut</title>
+<title>Clip Cutter</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <meta name="color-scheme" content="light dark">
 <script>
-/* Same theme handling as the Asset Library: dark by default, a stored choice wins. */
+/* Dark by default; a stored choice wins. Runs before first paint so there's no flash. */
 (function(){
   try{
-    var t = localStorage.getItem('ltc-theme');
+    var t = localStorage.getItem('clipcutter-theme');
     if(t==='light'||t==='dark') document.documentElement.setAttribute('data-theme',t);
   }catch(e){}
 })();
 </script>
 <style>
-/* ── tokens (shared with index.html) ─────────── */
+/* ── tokens ─────────────────────────────────── */
 :root{
   color-scheme:dark;
   --canvas:#0B0B0C; --surface:#141416; --raised:#1B1B1E;
@@ -234,7 +234,7 @@ legend{margin-bottom:6px}
 
 <header>
   <div>
-    <div class="eyebrow"><a href="https://tosincarson.github.io/Ltc-assets/">Learn to Cut</a> · Tools</div>
+    <div class="eyebrow">Cut · name · export</div>
     <h1>Clip Cutter</h1>
   </div>
   <div class="hdr-right">
@@ -253,12 +253,12 @@ legend{margin-bottom:6px}
   <section id="dropView">
     <label class="drop" id="drop" for="fileInput">
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--muted)"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>
-      <h2>Drop a tutorial video here</h2>
+      <h2>Drop a video here</h2>
       <p>MP4, MOV or WebM, up to about 150&nbsp;MB. Or <u>choose a file</u>.</p>
     </label>
     <div class="steps">
       <div><span class="label">Step 1</span><b>Load the video</b><span>It stays on this computer. Nothing is uploaded.</span></div>
-      <div><span class="label">Step 2</span><b>Mark each clip</b><span>Press <kbd>I</kbd> where a section starts and <kbd>O</kbd> where it ends. For example, “Sectioning”, “Clipper-over-comb”, “Blend the fade”.</span></div>
+      <div><span class="label">Step 2</span><b>Mark each clip</b><span>Press <kbd>I</kbd> where a section starts and <kbd>O</kbd> where it ends. Or type the times, like 1:14-1:28.</span></div>
       <div><span class="label">Step 3</span><b>Export</b><span>Download each clip as its own file, or join the ones you tick into one video.</span></div>
     </div>
   </section>
@@ -308,7 +308,7 @@ legend{margin-bottom:6px}
         <div class="typed">
           <div class="typed-hd"><label class="label" for="timesInput">Add clips by time</label>
             <span>Separate clips with commas or new lines. A name after the times is optional.</span></div>
-          <textarea id="timesInput" spellcheck="false" placeholder="1:14-1:28 Sectioning&#10;2:16-2:29 Blend the fade&#10;3:05-3:40"></textarea>
+          <textarea id="timesInput" spellcheck="false" placeholder="1:14-1:28 Intro&#10;2:16-2:29 Step one&#10;3:05-3:40"></textarea>
           <div class="typed-row">
             <button class="btn" id="addTimes">Add clips</button>
             <span class="typed-msg" id="timesMsg">Times can be m:ss, h:mm:ss or seconds, like 1:14.5 or 74.</span>
@@ -401,11 +401,11 @@ $('#themeBtn').addEventListener('click', () => {
   const cur = document.documentElement.getAttribute('data-theme') || 'dark';
   const next = cur === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
-  try{ localStorage.setItem('ltc-theme', next); }catch(e){}
+  try{ localStorage.setItem('clipcutter-theme', next); }catch(e){}
 });
 
 /* ── saved clips per video (name + size), so a reload doesn't lose your marks ── */
-const storeKey = () => state.file ? `ltc-clips:${state.file.name}:${state.file.size}` : null;
+const storeKey = () => state.file ? `clipcutter-clips:${state.file.name}:${state.file.size}` : null;
 function saveClips(){
   try{ localStorage.setItem(storeKey(), JSON.stringify(state.clips.map(({id,name,start,end,on}) => ({id,name,start,end,on})))); }catch(e){}
 }
@@ -697,7 +697,7 @@ async function unmountInput(){
 }
 
 /* ── export quality ── */
-/* height = target for the video's short side, so portrait (9:16) tutorials
+/* height = target for the video's short side, so portrait (9:16) videos
    get 1080×1920 at "1080p", not 608×1080. Never upscales. */
 const QUALITY = {
   original:{ desc:'Copies the video as it is, so it takes seconds. Cuts land on the nearest keyframe, so a clip can start up to about a second early.' },
