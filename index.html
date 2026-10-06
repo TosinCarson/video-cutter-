@@ -4,363 +4,400 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Clip Cutter</title>
+<meta name="description" content="Cut a video into clips in your browser and export them. Nothing is uploaded.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-<meta name="color-scheme" content="light dark">
-<script>
-/* Dark by default; a stored choice wins. Runs before first paint so there's no flash. */
-(function(){
-  try{
-    var t = localStorage.getItem('clipcutter-theme');
-    if(t==='light'||t==='dark') document.documentElement.setAttribute('data-theme',t);
-  }catch(e){}
-})();
-</script>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ── tokens ─────────────────────────────────── */
+/* Layout: an editor shell. Clips on the left, preview in the centre,
+   export settings on the right, a full-width timeline along the bottom.
+   One dark theme on purpose, like the editors it is modelled on. */
 :root{
   color-scheme:dark;
-  --canvas:#0B0B0C; --surface:#141416; --raised:#1B1B1E;
-  --line:#2B2B30; --line-soft:#1F1F23;
-  --text:#EDEBE8; --muted:#8A8886; --faint:#5C5A58;
-  --accent:#EDEBE8; --accent-hover:#FFFFFF; --accent-soft:#6A6865;
-  --accent-glow:rgba(237,235,232,.08); --on-accent:#0B0B0C;
-  --clip:rgba(237,235,232,.22); --clip-on:rgba(237,235,232,.42);
-  --danger:#E0786A;
-  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
-}
-:root[data-theme="light"]{
-  color-scheme:light;
-  --canvas:#FFFFFF; --surface:#F7F6F5; --raised:#F0EFED;
-  --line:#DEDCD8; --line-soft:#EBE9E6;
-  --text:#16161A; --muted:#5D5C5A; --faint:#918F8B;
-  --accent:#16161A; --accent-hover:#33323A; --accent-soft:#8B8985;
-  --accent-glow:rgba(22,22,26,.06); --on-accent:#FFFFFF;
-  --clip:rgba(22,22,26,.16); --clip-on:rgba(22,22,26,.34);
-  --danger:#B23A2B;
-}
-:root[data-theme="dark"]{
-  color-scheme:dark;
-  --canvas:#0B0B0C; --surface:#141416; --raised:#1B1B1E;
-  --line:#2B2B30; --line-soft:#1F1F23;
-  --text:#EDEBE8; --muted:#8A8886; --faint:#5C5A58;
-  --accent:#EDEBE8; --accent-hover:#FFFFFF; --accent-soft:#6A6865;
-  --accent-glow:rgba(237,235,232,.08); --on-accent:#0B0B0C;
-  --clip:rgba(237,235,232,.22); --clip-on:rgba(237,235,232,.42);
-  --danger:#E0786A;
+  --bg:#0E0F11;        /* app frame */
+  --panel:#16171A;     /* side panels, timeline */
+  --panel-2:#1C1E22;   /* cards, inputs */
+  --raised:#25282D;    /* hover, selected */
+  --line:#2A2D33;
+  --text:#E9EBEE; --muted:#9BA1A9; --faint:#636871;
+  --accent:#2E9BFF; --accent-hi:#5AB1FF; --accent-ink:#FFFFFF; --accent-soft:rgba(46,155,255,.16);
+  --clip:#A6DCEB; --clip-ink:#0C2630; --clip-off:#3A4A50;
+  --mark:#FFB020;
+  --danger:#FF6B5E;
+  --stage:#000000;
+  --ui:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  --r:6px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 [hidden]{display:none!important}
-body{
-  background:var(--canvas);color:var(--text);
-  font-family:"DM Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-  font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;
-}
-button,input,select{font:inherit;color:inherit}
-a{color:inherit}
-em,i{font-style:normal}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:13px/1.45 var(--ui);-webkit-font-smoothing:antialiased;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:1px;border-radius:4px}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:10.5px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+kbd{font:500 10px var(--mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;color:var(--muted);background:var(--panel-2)}
+svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
-/* ── header ─────────────────────────────────── */
-header{
-  border-bottom:1px solid var(--line);padding:22px 28px 18px;
-  display:flex;align-items:flex-end;gap:20px;flex-wrap:wrap;
-}
-.eyebrow{font-size:9.5px;letter-spacing:.28em;text-transform:uppercase;color:var(--faint);margin-bottom:5px}
-.eyebrow a{text-decoration:none}
-.eyebrow a:hover{color:var(--muted)}
-h1{font-weight:500;font-size:27px;line-height:1.05;letter-spacing:-.025em}
-.hdr-right{margin-left:auto;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
-.engine{font-size:11px;color:var(--faint);letter-spacing:.04em;text-align:right}
-.engine b{color:var(--muted);font-weight:500}
-
+/* ── buttons ── */
 .btn{
-  background:var(--accent);border:1px solid var(--accent);color:var(--on-accent);
-  padding:9px 17px;border-radius:2px;cursor:pointer;font-size:12px;
-  font-weight:500;letter-spacing:.05em;text-transform:uppercase;
-  transition:background .15s,border-color .15s,color .15s;white-space:nowrap;
-  display:inline-flex;align-items:center;justify-content:center;gap:7px;text-decoration:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  height:32px;padding:0 14px;border-radius:var(--r);border:1px solid transparent;
+  background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:12.5px;
+  cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s,color .15s;text-decoration:none;
 }
-.btn:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn:hover:not(:disabled){background:var(--accent-hi)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
-.btn.ghost{background:transparent;border-color:var(--line);color:var(--muted)}
-.btn.ghost:hover:not(:disabled){border-color:var(--muted);color:var(--text)}
-.btn svg,.icon-btn svg{width:14px;height:14px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.icon-btn{
-  background:transparent;border:1px solid var(--line);border-radius:2px;
-  width:34px;height:34px;display:grid;place-items:center;cursor:pointer;
-  color:var(--muted);transition:border-color .15s,color .15s;flex:none;
+.btn.ghost{background:var(--panel-2);border-color:var(--line);color:var(--text)}
+.btn.ghost:hover:not(:disabled){background:var(--raised)}
+.btn.wide{width:100%;height:38px;font-size:13px}
+.ib{
+  width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r);
+  background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;flex:none;
+  transition:background .15s,color .15s;
 }
-.icon-btn:hover:not(:disabled){border-color:var(--muted);color:var(--text)}
-.icon-btn:disabled{opacity:.35;cursor:not-allowed}
-.icon-btn.danger:hover{border-color:var(--danger);color:var(--danger)}
-#themeBtn svg{width:16px;height:16px;stroke-width:1.6}
-#themeBtn .i-moon{display:none}
-:root[data-theme="light"] #themeBtn .i-moon{display:block}
-:root[data-theme="light"] #themeBtn .i-sun{display:none}
+.ib:hover:not(:disabled){background:var(--raised);color:var(--text)}
+.ib:disabled{opacity:.3;cursor:not-allowed}
+.ib.sm{width:26px;height:26px}
+.ib.sm svg.i{width:14px;height:14px}
+.ib.play{width:40px;height:40px;border-radius:50%;background:var(--text);color:var(--bg)}
+.ib.play:hover{background:#fff;color:var(--bg)}
+.ib.play svg.i{fill:currentColor;stroke:none;width:16px;height:16px}
+.ib.danger:hover:not(:disabled){color:var(--danger)}
 
-main{padding:24px 28px 60px;max-width:1440px;margin:0 auto}
-.label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint)}
-
-/* ── drop zone ──────────────────────────────── */
-.drop{
-  border:1px dashed var(--line);border-radius:2px;background:var(--surface);
-  padding:56px 24px;display:grid;place-items:center;text-align:center;gap:18px;
-  cursor:pointer;transition:border-color .15s,background .15s;
+/* ── shell ── */
+.app{
+  height:100%;display:grid;gap:1px;background:var(--line);
+  grid-template-columns:300px minmax(0,1fr) 290px;
+  grid-template-rows:52px minmax(0,1fr) 236px;
+  grid-template-areas:"top top top" "left center right" "tl tl tl";
 }
-.drop:hover,.drop.over{border-color:var(--muted);background:var(--raised)}
-.drop h2{font-weight:500;font-size:20px;letter-spacing:-.015em;text-wrap:balance}
-.drop p{color:var(--muted);max-width:52ch}
-.steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line);
-  border:1px solid var(--line);margin-top:24px}
-.steps div{background:var(--canvas);padding:18px 20px}
-.steps b{display:block;font-weight:500;margin:4px 0 2px}
-.steps span{color:var(--muted);font-size:13px}
+.app > *{background:var(--panel);min-width:0;min-height:0}
 
-/* ── workspace ──────────────────────────────── */
-.work{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
-.filebar{display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
-.filebar .fname{font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.filebar .meta{color:var(--faint);font-size:12px}
-.stage{background:#000;border:1px solid var(--line);border-radius:2px;position:relative}
-video{display:block;width:100%;max-height:62vh;background:#000}
-.vid-error{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#EDEBE8;font-size:13px}
+/* top bar */
+.top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 14px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;letter-spacing:-.01em}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:#fff}
+.logo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.file{flex:1;min-width:0;display:flex;justify-content:center;align-items:center;gap:10px;color:var(--muted)}
+.file b{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40ch}
+.top-r{display:flex;align-items:center;gap:10px}
+.pill{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px;border-radius:13px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px;color:var(--muted);white-space:nowrap}
+.pill i{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.pill.ok i{background:#3DD68C}
+.pill.busy i{background:var(--mark)}
+.pill.bad i{background:var(--danger)}
 
-/* timeline */
-.timeline{margin-top:14px;user-select:none;touch-action:none}
-.track{
-  position:relative;height:46px;background:var(--surface);border:1px solid var(--line);
-  border-radius:2px;cursor:pointer;overflow:hidden;
-}
-.seg{
-  position:absolute;top:0;bottom:0;background:var(--clip);
-  border-left:1px solid var(--accent-soft);border-right:1px solid var(--accent-soft);
-  font-size:10px;color:var(--text);padding:3px 5px;overflow:hidden;white-space:nowrap;
-}
-.seg.off{background:transparent;border-style:dashed}
-.seg.active{background:var(--clip-on)}
-.pending{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,var(--clip) 0 6px,transparent 6px 12px);border-left:2px solid var(--accent)}
-.playhead{position:absolute;top:-1px;bottom:-1px;width:2px;background:var(--accent);margin-left:-1px;pointer-events:none}
-.playhead::before{content:"";position:absolute;top:0;left:-4px;border:5px solid transparent;border-top-color:var(--accent)}
-.ticks{position:relative;height:18px;font-size:10px;color:var(--faint)}
-.ticks span{position:absolute;top:3px;transform:translateX(-50%)}
-.ticks span:first-child{transform:none}
-
-.transport{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
-.clock{font-size:13px;padding:0 8px;min-width:0}
-.clock .dur{color:var(--faint)}
-.transport .spacer{flex:1}
-select.rate{background:var(--surface);border:1px solid var(--line);border-radius:2px;padding:7px 8px;font-size:12px;color:var(--muted)}
-.markrow{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center}
-.markrow .btn{flex:1;min-width:150px}
-kbd{font-family:var(--mono);font-size:10px;border:1px solid currentColor;border-radius:2px;padding:0 4px;opacity:.7}
-.hint{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:1.5em}
-.typed{margin-top:18px;border:1px solid var(--line);border-radius:2px;background:var(--surface);padding:14px 16px;display:grid;gap:10px}
-.typed-hd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.typed-hd span{font-size:12px;color:var(--muted)}
-.typed textarea{width:100%;min-height:72px;resize:vertical;background:var(--canvas);border:1px solid var(--line);border-radius:2px;padding:9px 11px;font:13px/1.5 var(--mono);color:var(--text)}
+/* left: clips */
+.left{grid-area:left;display:flex;flex-direction:column}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
+.ph h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.ph .count{margin-left:auto;font-size:11.5px;color:var(--faint)}
+.typed{margin:0 12px 10px;padding:10px;border-radius:var(--r);background:var(--panel-2);border:1px solid var(--line);display:grid;gap:8px}
+.typed textarea{width:100%;min-height:58px;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;font:12px/1.5 var(--mono)}
 .typed textarea:focus{border-color:var(--accent);outline:none}
 .typed textarea::placeholder{color:var(--faint)}
-.typed-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-.typed-msg{font-size:12.5px;color:var(--muted);flex:1;min-width:0}
+.typed-row{display:flex;gap:8px;align-items:center}
+.typed-row .btn{height:28px;padding:0 12px;font-size:12px}
+.typed-msg{font-size:11.5px;color:var(--muted);flex:1;min-width:0}
 .typed-msg.bad{color:var(--danger)}
-select.quality{width:100%;background:var(--canvas);border:1px solid var(--line);border-radius:2px;padding:9px 10px;font-size:13px}
-select.quality:focus{border-color:var(--accent);outline:none}
-.qdesc{font-size:12px;color:var(--muted)}
-.keys{font-size:11.5px;color:var(--faint);margin-top:14px;display:flex;gap:6px 16px;flex-wrap:wrap}
-
-/* ── side panel ─────────────────────────────── */
-.panel{border:1px solid var(--line);border-radius:2px;background:var(--surface)}
-.panel-hd{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
-.panel-hd .count{margin-left:auto;font-size:12px;color:var(--faint)}
-.clips{list-style:none;max-height:46vh;overflow:auto}
-.empty{padding:28px 16px;color:var(--muted);font-size:13px;text-align:center}
-.clip{padding:12px 16px;border-bottom:1px solid var(--line-soft);display:grid;gap:8px}
-.clip.active{background:var(--raised)}
-.clip-top{display:flex;align-items:center;gap:8px}
-.clip-top input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);flex:none}
-.clip-n{font-size:11px;color:var(--faint);width:20px;flex:none}
-.clip-name{flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:2px;padding:4px 6px;font-weight:500}
+.clips{list-style:none;overflow:auto;flex:1;padding:2px 8px 12px;display:flex;flex-direction:column;gap:2px}
+.empty{padding:22px 12px;color:var(--faint);font-size:12.5px;text-align:center}
+.clip{display:grid;grid-template-columns:auto 72px minmax(0,1fr);gap:8px 10px;padding:8px;border-radius:var(--r);border:1px solid transparent;cursor:pointer}
+.clip:hover{background:var(--panel-2)}
+.clip.sel{background:var(--raised);border-color:var(--accent)}
+.clip.off .thumb,.clip.off .clip-name{opacity:.45}
+.clip input[type=checkbox]{width:15px;height:15px;accent-color:var(--accent);margin-top:2px}
+.thumb{width:72px;height:44px;border-radius:4px;background:var(--bg) center/cover no-repeat;position:relative;overflow:hidden}
+.thumb span,.thumb em{position:absolute;bottom:3px;font:500 9.5px var(--mono);background:rgba(0,0,0,.7);color:#fff;padding:0 4px;border-radius:3px}
+.clip-main{min-width:0;display:grid;gap:3px}
+.clip-name{width:100%;background:transparent;border:1px solid transparent;border-radius:4px;padding:1px 4px;margin-left:-5px;font-weight:600;font-size:13px}
 .clip-name:hover{border-color:var(--line)}
-.clip-name:focus{border-color:var(--accent);outline:none;background:var(--canvas)}
-.clip-times{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;padding-left:44px}
-.tfield{display:grid;gap:3px;min-width:0}
-.tfield .row{display:flex;gap:4px}
-.tfield input{width:100%;min-width:0;background:var(--canvas);border:1px solid var(--line);border-radius:2px;padding:5px 7px;font-size:12px}
-.tfield input:focus{border-color:var(--accent);outline:none}
-.tfield input.bad{border-color:var(--danger)}
-.tfield .icon-btn{width:28px;height:28px}
-.tfield .icon-btn svg{width:12px;height:12px}
-.clip-dur{font-size:12px;color:var(--muted);padding-bottom:6px;white-space:nowrap}
-.clip-actions{display:flex;gap:6px;padding-left:44px;align-items:center;flex-wrap:wrap}
-.clip-actions .icon-btn{width:30px;height:30px}
-.clip-out{margin-left:auto;font-size:12px;display:flex;gap:8px;align-items:center}
-.clip-out a{color:var(--text)}
-.clip-out .sz{color:var(--faint)}
+.clip-name:focus{border-color:var(--accent);outline:none;background:var(--bg)}
+.thumb span{left:3px}
+.thumb em{right:3px;font-style:normal}
+.clip-meta{font-size:11px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.clip-edit{grid-column:2 / -1;display:none;gap:8px}
+.clip.sel .clip-edit{display:grid}
+.tf{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;gap:6px}
+.tf input{width:100%;min-width:0;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 7px;font-size:11.5px}
+.tf input:focus{border-color:var(--accent);outline:none}
+.tf input.bad{border-color:var(--danger)}
+.clip-actions{display:flex;gap:2px}
 
-.export{padding:16px;border-top:1px solid var(--line);display:grid;gap:14px}
-fieldset{border:0;display:grid;gap:6px}
-legend{margin-bottom:6px}
-.opt{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border:1px solid var(--line);border-radius:2px;cursor:pointer;background:var(--canvas)}
-.opt:has(input:checked){border-color:var(--accent-soft)}
-.opt input{margin-top:3px;accent-color:var(--accent);flex:none}
-.opt b{font-weight:500;display:block;font-size:13px}
-.opt span{font-size:12px;color:var(--muted)}
+/* centre: preview */
+.center{grid-area:center;display:flex;flex-direction:column;background:var(--bg)}
+.stage{flex:1;min-height:0;margin:14px 14px 0;border-radius:var(--r);background:var(--stage);position:relative;overflow:hidden;display:grid;place-items:center}
+.stage video{width:100%;height:100%;object-fit:contain;display:block}
+.vid-error{position:absolute;inset:0;display:grid;place-items:center;padding:24px;text-align:center;color:#ddd;font-size:13px;background:rgba(0,0,0,.75)}
+.drop{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:14px;padding:24px;text-align:center;cursor:pointer;
+  border:1.5px dashed var(--line);border-radius:var(--r);background:var(--panel);transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop .big{width:56px;height:56px;border-radius:14px;background:var(--accent);display:grid;place-items:center;color:#fff}
+.drop .big svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.drop h1{font-size:20px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
+.drop p{color:var(--muted);max-width:44ch}
+.steps{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+.steps span{font-size:12px;color:var(--muted);background:var(--panel-2);border:1px solid var(--line);border-radius:14px;padding:4px 11px}
+.steps b{color:var(--text);font-weight:600}
+.over-badge{position:absolute;top:10px;left:10px;font:500 11px var(--mono);background:rgba(0,0,0,.6);color:#fff;padding:3px 8px;border-radius:4px;pointer-events:none}
+
+.controls{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:10px 14px 4px}
+.tc{font:500 20px var(--mono);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.tc small{font-size:12px;color:var(--faint);margin-left:6px}
+.transport{display:flex;align-items:center;gap:4px}
+.markbtn{height:32px;padding:0 10px;border-radius:var(--r);border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:12px;white-space:nowrap}
+.markbtn:hover{background:var(--raised)}
+.markbtn .br{font:600 15px var(--mono);color:var(--mark)}
+.markbtn.armed{border-color:var(--mark)}
+.c-right{display:flex;justify-content:flex-end;align-items:center;gap:8px}
+select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);height:30px;padding:0 8px;font-size:12px}
+.hint{padding:2px 14px 10px;font-size:12px;color:var(--muted);min-height:28px;text-align:center}
+
+/* right: export */
+.right{grid-area:right;display:flex;flex-direction:column;overflow:auto}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;gap:10px}
+.sec:last-child{border-bottom:0}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);padding:3px;gap:3px}
+.seg label{position:relative;cursor:pointer}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg span{display:block;text-align:center;padding:6px 4px;border-radius:4px;font-size:12px;font-weight:600;color:var(--muted)}
+.seg input:checked + span{background:var(--raised);color:var(--text)}
+.seg input:focus-visible + span{outline:2px solid var(--accent)}
+.sub{font-size:11.5px;color:var(--muted)}
+.qsel{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);height:34px;padding:0 10px;font-size:12.5px}
+.qsel:focus{border-color:var(--accent);outline:none}
+.summary{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.summary div{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px}
+.summary b{display:block;font:500 16px var(--mono)}
+.summary span{font-size:11px;color:var(--faint)}
 .progress{display:grid;gap:6px}
-.bar{height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.bar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
-.pstatus{font-size:12px;color:var(--muted);display:flex;gap:10px;align-items:center}
+.pstatus{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
 .pstatus span{flex:1;min-width:0}
-.joined{font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.err{color:var(--danger);font-size:12.5px}
+.pstatus .btn{height:26px;padding:0 10px;font-size:11.5px}
+.err{color:var(--danger);font-size:12px}
+.outs{list-style:none;display:grid;gap:4px}
+.outs li{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r);background:var(--panel-2);border:1px solid var(--line);font-size:12px}
+.outs .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.outs .s{color:var(--faint);font-size:11px}
+.outs a{color:var(--accent-hi);font-weight:600;text-decoration:none}
+.outs a:hover{text-decoration:underline}
+.keys{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:11.5px;color:var(--muted);align-items:center}
+.keys span:nth-child(odd){display:flex;gap:3px}
 
-@media (max-width:1000px){
-  .work{grid-template-columns:minmax(0,1fr)}
-  .clips{max-height:none}
+/* timeline */
+.tl{grid-area:tl;display:flex;flex-direction:column}
+.tl-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line)}
+.tl-bar .zoom{font-size:11px;color:var(--faint);width:40px;text-align:center}
+.tl-bar .tl-hint{margin-left:auto;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.tl-body{flex:1;min-height:0;display:grid;grid-template-columns:44px minmax(0,1fr)}
+.tl-labels{display:grid;grid-template-rows:24px 64px 1fr;border-right:1px solid var(--line);color:var(--faint)}
+.tl-labels div{display:grid;place-items:center}
+.tl-scroll{overflow-x:auto;overflow-y:hidden;position:relative}
+.tl-inner{position:relative;height:100%;min-width:100%;display:grid;grid-template-rows:24px 64px 1fr}
+.ruler{position:relative;border-bottom:1px solid var(--line);cursor:pointer;touch-action:none}
+.ruler .t{position:absolute;top:0;bottom:0;border-left:1px solid var(--line);font:10px var(--mono);color:var(--faint);padding:5px 0 0 4px;white-space:nowrap}
+.ruler .m{position:absolute;bottom:0;height:5px;border-left:1px solid var(--line)}
+.lane{position:relative;margin:6px 0}
+.lane-clips{touch-action:pan-x}
+.lane-film{border-radius:4px;overflow:hidden;background:var(--panel-2);touch-action:pan-x;cursor:pointer;margin:6px 0 10px}
+.lane-film img{position:absolute;top:0;height:100%;object-fit:cover;opacity:.75;pointer-events:none;user-select:none}
+.lane-film .none{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:var(--faint)}
+.blk{
+  position:absolute;top:4px;bottom:4px;border-radius:6px;background:var(--clip);color:var(--clip-ink);
+  display:flex;align-items:center;gap:6px;padding:0 12px;overflow:hidden;cursor:pointer;
+  font-size:12px;font-weight:700;white-space:nowrap;box-shadow:0 0 0 1px rgba(0,0,0,.25);
 }
-@media (max-width:640px){
-  header{padding:18px 16px 14px}
-  main{padding:16px 16px 48px}
-  .steps{grid-template-columns:minmax(0,1fr)}
-  .clip-times,.clip-actions{padding-left:0}
-  .keys{display:none}
+.blk .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.blk .ix{font:500 10px var(--mono);opacity:.6}
+.blk.off{background:var(--clip-off);color:var(--muted)}
+.blk.sel{box-shadow:0 0 0 2px var(--text)}
+.blk .h{position:absolute;top:0;bottom:0;width:10px;cursor:ew-resize;touch-action:none;display:grid;place-items:center}
+.blk .h::after{content:"";width:2px;height:16px;border-radius:1px;background:currentColor;opacity:.55}
+.blk .h.s{left:0}
+.blk .h.e{right:0}
+.pend{position:absolute;top:4px;bottom:4px;border-radius:6px;border:1.5px dashed var(--mark);
+  background:repeating-linear-gradient(135deg,rgba(255,176,32,.18) 0 6px,transparent 6px 12px);pointer-events:none}
+.playhead{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--text);pointer-events:none;z-index:3}
+.playhead::before{content:"";position:absolute;top:0;left:-5px;width:12px;height:12px;border-radius:2px 2px 6px 6px;background:var(--text)}
+.tl-empty{position:absolute;inset:24px 0 0;display:grid;place-items:center;color:var(--faint);font-size:12.5px;pointer-events:none}
+
+/* ── narrow screens: stack everything, page scrolls ── */
+@media (max-width:980px){
+  body{overflow:auto}
+  .app{height:auto;min-height:100%;grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
+    grid-template-areas:"top" "center" "tl" "left" "right"}
+  .top{padding:10px 16px;flex-wrap:wrap}
+  .file{order:3;flex-basis:100%;justify-content:flex-start}
+  .stage{aspect-ratio:16/9;flex:none;margin:12px 16px 0;max-width:100%}
+  .controls{grid-template-columns:1fr auto;padding:10px 16px 4px}
+  .controls .transport{grid-column:1 / -1;grid-row:2;justify-content:center;flex-wrap:wrap}
+  .tl{height:220px}
+  .clips{overflow:visible}
+  .right{overflow:visible}
+  .keys-sec{display:none}
+}
+@media (max-width:520px){
+  .tc{font-size:16px}
+  .top-r .pill{display:none}
+  .markbtn .txt{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
+<input type="file" id="fileInput" accept="video/*,.mov,.mp4,.m4v,.webm,.mkv" hidden>
 
-<header>
-  <div>
-    <div class="eyebrow">Cut · name · export</div>
-    <h1>Clip Cutter</h1>
-  </div>
-  <div class="hdr-right">
-    <div class="engine" id="engineStatus">Runs in your browser.<br>Videos are never uploaded.</div>
-    <button class="icon-btn" id="themeBtn" title="Switch theme" aria-label="Switch theme">
-      <svg class="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8.2 8.2 0 0 1 9.5 4a8.4 8.4 0 1 0 10.5 10.5z"/></svg>
-      <svg class="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.4v2.2M12 19.4v2.2M2.4 12h2.2M19.4 12h2.2M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6"/></svg>
-    </button>
-  </div>
-</header>
-
-<main>
-  <input type="file" id="fileInput" accept="video/*,.mov,.mp4,.m4v,.webm,.mkv" hidden>
-
-  <!-- empty state -->
-  <section id="dropView">
-    <label class="drop" id="drop" for="fileInput">
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="color:var(--muted)"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>
-      <h2>Drop a video here</h2>
-      <p>MP4, MOV or WebM, up to about 150&nbsp;MB. Or <u>choose a file</u>.</p>
-    </label>
-    <div class="steps">
-      <div><span class="label">Step 1</span><b>Load the video</b><span>It stays on this computer. Nothing is uploaded.</span></div>
-      <div><span class="label">Step 2</span><b>Mark each clip</b><span>Press <kbd>I</kbd> where a section starts and <kbd>O</kbd> where it ends. Or type the times, like 1:14-1:28.</span></div>
-      <div><span class="label">Step 3</span><b>Export</b><span>Download each clip as its own file, or join the ones you tick into one video.</span></div>
+<div class="app">
+  <!-- top bar -->
+  <header class="top">
+    <div class="brand">
+      <span class="logo"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></span>
+      Clip Cutter
     </div>
-  </section>
+    <div class="file" id="fileBar"><span>No video loaded</span></div>
+    <div class="top-r">
+      <span class="pill" id="engine" title="The video engine runs in your browser. Videos are never uploaded."><i></i><span id="engineText">Runs in your browser</span></span>
+      <button class="btn ghost" id="openBtn">
+        <svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Open video</button>
+      <button class="btn" id="exportTop" disabled>
+        <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Export</button>
+    </div>
+  </header>
 
-  <!-- editor -->
-  <section id="editView" hidden>
-    <div class="work">
-      <div>
-        <div class="filebar">
-          <span class="fname" id="fileName"></span>
-          <span class="meta num" id="fileMeta"></span>
-          <button class="btn ghost" id="replaceBtn">Load another video</button>
-        </div>
-        <div class="stage">
-          <video id="video" playsinline preload="auto"></video>
-          <div class="vid-error" id="vidError" hidden>This browser can’t preview this video’s format (often iPhone HEVC footage in Chrome on Windows). Try Safari, or export the video from your phone as “Most Compatible” (H.264).</div>
-        </div>
+  <!-- left: clips -->
+  <aside class="left">
+    <div class="ph"><h2>Clips</h2><span class="count num" id="clipCount">0</span></div>
+    <div class="typed">
+      <label class="label" for="timesInput">Add clips by time</label>
+      <textarea id="timesInput" spellcheck="false" placeholder="1:14-1:28 Intro&#10;2:16-2:29 Step one&#10;3:05-3:40"></textarea>
+      <div class="typed-row">
+        <button class="btn" id="addTimes" disabled>Add clips</button>
+        <span class="typed-msg" id="timesMsg">Commas or new lines between clips. Names are optional.</span>
+      </div>
+    </div>
+    <ul class="clips" id="clips"></ul>
+  </aside>
 
-        <div class="timeline" id="timeline">
-          <div class="track" id="track"><div class="playhead" id="playhead"></div></div>
-          <div class="ticks num" id="ticks"></div>
+  <!-- centre: preview -->
+  <main class="center">
+    <div class="stage" id="stage">
+      <video id="video" playsinline preload="auto"></video>
+      <span class="over-badge num" id="clipBadge" hidden></span>
+      <div class="vid-error" id="vidError" hidden>This browser can’t preview this video’s format. It’s often iPhone HEVC footage in Chrome on Windows. Try Safari, or set the iPhone camera format to “Most Compatible”.</div>
+      <label class="drop" id="drop" for="fileInput">
+        <span class="big"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg></span>
+        <h1>Drop a video to start cutting</h1>
+        <p>MP4, MOV or WebM, up to about 150 MB. It stays on your computer. Nothing is uploaded.</p>
+        <div class="steps">
+          <span><b>1</b> Load a video</span>
+          <span><b>2</b> Mark clips with <kbd>I</kbd> and <kbd>O</kbd>, or type times</span>
+          <span><b>3</b> Export</span>
         </div>
+      </label>
+    </div>
 
-        <div class="transport">
-          <button class="icon-btn" id="playBtn" title="Play / pause (Space)" aria-label="Play">
-            <svg viewBox="0 0 24 24" id="playIcon"><path d="M7 5v14l11-7z"/></svg>
-          </button>
-          <button class="icon-btn" data-step="-5" title="Back 5 seconds (Shift + ←)" aria-label="Back 5 seconds"><svg viewBox="0 0 24 24"><path d="M11 6 5 12l6 6M19 6l-6 6 6 6"/></svg></button>
-          <button class="icon-btn" data-step="-0.0333" title="Back one frame (,)" aria-label="Back one frame"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
-          <button class="icon-btn" data-step="0.0333" title="Forward one frame (.)" aria-label="Forward one frame"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
-          <button class="icon-btn" data-step="5" title="Forward 5 seconds (Shift + →)" aria-label="Forward 5 seconds"><svg viewBox="0 0 24 24"><path d="m13 6 6 6-6 6M5 6l6 6-6 6"/></svg></button>
-          <span class="clock num"><span id="tNow">0:00.00</span> <span class="dur">/ <span id="tDur">0:00.00</span></span></span>
-          <span class="spacer"></span>
-          <label class="label" for="rate">Speed</label>
-          <select class="rate" id="rate">
-            <option value="0.5">0.5×</option><option value="1" selected>1×</option>
-            <option value="1.5">1.5×</option><option value="2">2×</option><option value="4">4×</option>
-          </select>
-        </div>
+    <div class="controls">
+      <div class="tc"><span id="tNow">00:00.00</span><small>/ <span id="tDur">00:00.00</span></small></div>
+      <div class="transport">
+        <button class="markbtn" id="markIn" title="Mark start (I)"><span class="br">{</span><span class="txt">Start</span></button>
+        <button class="ib" data-step="-5" title="Back 5 seconds (Shift+←)" aria-label="Back 5 seconds"><svg class="i" viewBox="0 0 24 24"><path d="M11 6 5 12l6 6M19 6l-6 6 6 6"/></svg></button>
+        <button class="ib" data-step="-0.0333" title="Back one frame (,)" aria-label="Back one frame"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <button class="ib play" id="playBtn" title="Play / pause (Space)" aria-label="Play"><svg class="i" viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg></button>
+        <button class="ib" data-step="0.0333" title="Forward one frame (.)" aria-label="Forward one frame"><svg class="i" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+        <button class="ib" data-step="5" title="Forward 5 seconds (Shift+→)" aria-label="Forward 5 seconds"><svg class="i" viewBox="0 0 24 24"><path d="m13 6 6 6-6 6M5 6l6 6-6 6"/></svg></button>
+        <button class="markbtn" id="markOut" title="Mark end and add clip (O)"><span class="txt">End</span><span class="br">}</span></button>
+      </div>
+      <div class="c-right">
+        <select class="sel" id="rate" aria-label="Playback speed">
+          <option value="0.5">0.5×</option><option value="1" selected>1×</option>
+          <option value="1.5">1.5×</option><option value="2">2×</option><option value="4">4×</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint" id="hint">Load a video to begin.</p>
+  </main>
 
-        <div class="markrow">
-          <button class="btn" id="markIn"><span>Mark start</span> <kbd>I</kbd></button>
-          <button class="btn" id="markOut"><span>Mark end &amp; add clip</span> <kbd>O</kbd></button>
-          <button class="btn ghost" id="cancelMark" hidden>Clear start <kbd>Esc</kbd></button>
-        </div>
-        <p class="hint" id="hint">Play the video and press <kbd>I</kbd> where a section starts.</p>
-        <div class="typed">
-          <div class="typed-hd"><label class="label" for="timesInput">Add clips by time</label>
-            <span>Separate clips with commas or new lines. A name after the times is optional.</span></div>
-          <textarea id="timesInput" spellcheck="false" placeholder="1:14-1:28 Intro&#10;2:16-2:29 Step one&#10;3:05-3:40"></textarea>
-          <div class="typed-row">
-            <button class="btn" id="addTimes">Add clips</button>
-            <span class="typed-msg" id="timesMsg">Times can be m:ss, h:mm:ss or seconds, like 1:14.5 or 74.</span>
-          </div>
-        </div>
-        <div class="keys">
-          <span><kbd>Space</kbd> play / pause</span>
-          <span><kbd>←</kbd><kbd>→</kbd> 1 s</span>
-          <span><kbd>Shift</kbd>+<kbd>←</kbd><kbd>→</kbd> 5 s</span>
-          <span><kbd>,</kbd><kbd>.</kbd> one frame</span>
-          <span><kbd>I</kbd> start · <kbd>O</kbd> end</span>
+  <!-- right: export -->
+  <aside class="right">
+    <div class="sec">
+      <div class="ph" style="padding:0"><h2>Export</h2></div>
+      <div class="summary">
+        <div><b class="num" id="sumN">0</b><span>clips ticked</span></div>
+        <div><b class="num" id="sumT">0:00</b><span>total length</span></div>
+      </div>
+    </div>
+    <div class="sec">
+      <span class="label">Export as</span>
+      <div class="seg" role="radiogroup" aria-label="Export as">
+        <label><input type="radio" name="mode" value="separate" id="modeSeparate" checked><span>Separate files</span></label>
+        <label><input type="radio" name="mode" value="join" id="modeJoin"><span>One video</span></label>
+      </div>
+      <span class="sub" id="modeDesc"></span>
+    </div>
+    <div class="sec">
+      <label class="label" for="quality">Quality</label>
+      <select class="qsel" id="quality">
+        <option value="original" selected>Original (fastest, no quality loss)</option>
+        <option value="high">High, same size as the original</option>
+        <option value="1080">1080p</option>
+        <option value="720">720p, smaller file</option>
+        <option value="480">480p, smallest file</option>
+      </select>
+      <span class="sub" id="qDesc"></span>
+    </div>
+    <div class="sec">
+      <button class="btn wide" id="exportBtn" disabled>Export</button>
+      <div class="progress" id="progress" hidden>
+        <div class="bar"><i id="barFill"></i></div>
+        <div class="pstatus"><span id="pText">Starting…</span><button class="btn ghost" id="cancelBtn">Cancel</button></div>
+      </div>
+      <div class="err" id="exportErr" hidden></div>
+      <ul class="outs" id="outs"></ul>
+    </div>
+    <div class="sec keys-sec">
+      <span class="label">Shortcuts</span>
+      <div class="keys">
+        <span><kbd>Space</kbd></span><span>Play / pause</span>
+        <span><kbd>I</kbd><kbd>O</kbd></span><span>Mark start / end</span>
+        <span><kbd>←</kbd><kbd>→</kbd></span><span>1 second (Shift: 5)</span>
+        <span><kbd>,</kbd><kbd>.</kbd></span><span>One frame</span>
+        <span><kbd>+</kbd><kbd>−</kbd></span><span>Zoom timeline</span>
+        <span><kbd>Esc</kbd></span><span>Clear a marked start</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- timeline -->
+  <section class="tl" aria-label="Timeline">
+    <div class="tl-bar">
+      <button class="ib sm" id="zoomOut" title="Zoom out (−)" aria-label="Zoom out"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+      <span class="zoom num" id="zoomLbl">1×</span>
+      <button class="ib sm" id="zoomIn" title="Zoom in (+)" aria-label="Zoom in"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+      <span class="tl-hint">Click to jump. Drag a clip’s edges to trim it.</span>
+    </div>
+    <div class="tl-body">
+      <div class="tl-labels">
+        <div></div>
+        <div title="Clips"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></div>
+        <div title="Video"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 5v14M17 5v14M3 9h4M3 15h4M17 9h4M17 15h4"/></svg></div>
+      </div>
+      <div class="tl-scroll" id="tlScroll">
+        <div class="tl-inner" id="tlInner">
+          <div class="ruler" id="ruler"></div>
+          <div class="lane lane-clips" id="laneClips"></div>
+          <div class="lane lane-film" id="laneFilm"></div>
+          <div class="playhead" id="playhead" hidden></div>
+          <div class="tl-empty" id="tlEmpty">Your timeline appears here</div>
         </div>
       </div>
-
-      <aside class="panel">
-        <div class="panel-hd">
-          <span class="label">Clips</span>
-          <span class="count num" id="clipCount">0 clips</span>
-        </div>
-        <ul class="clips" id="clips"></ul>
-
-        <div class="export">
-          <fieldset>
-            <legend class="label">Export as</legend>
-            <label class="opt"><input type="radio" name="mode" value="separate" id="modeSeparate" checked>
-              <div><b>Separate files</b><span>One video file for each ticked clip.</span></div></label>
-            <label class="opt"><input type="radio" name="mode" value="join" id="modeJoin">
-              <div><b>One joined video</b><span>The ticked clips, in list order, back to back.</span></div></label>
-          </fieldset>
-          <fieldset>
-            <label class="label" for="quality" style="margin-bottom:6px">Export quality</label>
-            <select class="quality" id="quality">
-              <option value="original" selected>Original (fastest, no quality loss)</option>
-              <option value="high">High, same size as the original</option>
-              <option value="1080">1080p</option>
-              <option value="720">720p, smaller file</option>
-              <option value="480">480p, smallest file</option>
-            </select>
-            <span class="qdesc" id="qDesc"></span>
-          </fieldset>
-          <button class="btn" id="exportBtn" disabled>Export</button>
-          <div class="progress" id="progress" hidden>
-            <div class="bar"><i id="barFill"></i></div>
-            <div class="pstatus"><span id="pText">Starting…</span><button class="btn ghost" id="cancelBtn">Cancel</button></div>
-          </div>
-          <div class="joined" id="joinedOut" hidden></div>
-          <div class="err" id="exportErr" hidden></div>
-        </div>
-      </aside>
     </div>
   </section>
-</main>
+</div>
 
 <script type="module">
 /* ── ffmpeg.wasm, loaded from jsDelivr on first use ───────────────
@@ -370,21 +407,24 @@ legend{margin-bottom:6px}
 const FF_BASE   = 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.15/dist/esm';
 const CORE_BASE = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.10/dist/esm';
 const FPS_STEP  = 1/30;
+const FILM_FRAMES = 30;
+const ZOOMS = [1, 2, 4, 8, 16, 32];
 
 const $ = s => document.querySelector(s);
 const video = $('#video');
-const state = { file:null, url:null, duration:0, clips:[], pendingIn:null, activeId:null, stopAt:null, nextId:1 };
+const state = { file:null, url:null, duration:0, clips:[], pendingIn:null, selId:null, stopAt:null, nextId:1, frames:[], zoom:0 };
 
-let ff = null, ffLoading = null, mounted = null, cancelled = false;
+let ff = null, ffLoading = null, mounted = null, cancelled = false, busy = false, outputs = [];
 
-/* ── time helpers ── */
+/* ── helpers ── */
 function fmt(t){
   if(!isFinite(t)) t = 0;
   t = Math.max(0,t);
   const h = Math.floor(t/3600), m = Math.floor(t%3600/60), s = t%60;
   const ss = s.toFixed(2).padStart(5,'0');
-  return h ? `${h}:${String(m).padStart(2,'0')}:${ss}` : `${m}:${ss}`;
+  return h ? `${h}:${String(m).padStart(2,'0')}:${ss}` : `${String(m).padStart(2,'0')}:${ss}`;
 }
+const fmtShort = t => fmt(t).replace(/\.\d+$/,'').replace(/^0(\d:)/,'$1');
 function parseTime(str){
   str = String(str).trim();
   if(!/^[\d:.]+$/.test(str)) return NaN;
@@ -395,16 +435,10 @@ function parseTime(str){
 function fmtBytes(b){ return b > 1e6 ? (b/1e6).toFixed(1)+' MB' : Math.max(1,Math.round(b/1e3))+' KB'; }
 function esc(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function safeName(s){ return (s.trim() || 'clip').replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').slice(0,80); }
+const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
+const selClip = () => state.clips.find(c => c.id === state.selId);
 
-/* ── theme ── */
-$('#themeBtn').addEventListener('click', () => {
-  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = cur === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  try{ localStorage.setItem('clipcutter-theme', next); }catch(e){}
-});
-
-/* ── saved clips per video (name + size), so a reload doesn't lose your marks ── */
+/* ── saved clips per video (name + size), so a reload keeps your marks ── */
 const storeKey = () => state.file ? `clipcutter-clips:${state.file.name}:${state.file.size}` : null;
 function saveClips(){
   try{ localStorage.setItem(storeKey(), JSON.stringify(state.clips.map(({id,name,start,end,on}) => ({id,name,start,end,on})))); }catch(e){}
@@ -416,134 +450,261 @@ function loadClips(){
 /* ── loading a file ── */
 const fileInput = $('#fileInput'), drop = $('#drop');
 fileInput.addEventListener('change', () => { if(fileInput.files[0]) openFile(fileInput.files[0]); fileInput.value = ''; });
-$('#replaceBtn').addEventListener('click', () => fileInput.click());
+$('#openBtn').addEventListener('click', () => fileInput.click());
 ['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
 document.addEventListener('drop', e => { const f = e.dataTransfer?.files?.[0]; if(f) openFile(f); });
 
 async function openFile(file){
+  if(busy) return;
   if(!/^video\//.test(file.type) && !/\.(mov|mp4|m4v|webm|mkv)$/i.test(file.name)){
-    alert('That file doesn’t look like a video. Choose an MP4, MOV or WebM file.');
+    setHint('That file doesn’t look like a video. Choose an MP4, MOV or WebM file.');
     return;
   }
-  if(busy) return;
   if(state.url) URL.revokeObjectURL(state.url);
   await unmountInput();
-  state.clips.forEach(c => c.outUrl && URL.revokeObjectURL(c.outUrl));
   state.file = file; state.url = URL.createObjectURL(file);
-  state.pendingIn = null; state.activeId = null; state.stopAt = null;
+  state.pendingIn = null; state.selId = null; state.stopAt = null; state.duration = 0; state.frames = []; state.zoom = 0;
   state.clips = loadClips().map(c => ({...c}));
   state.nextId = state.clips.reduce((m,c) => Math.max(m,c.id), 0) + 1;
-  $('#vidError').hidden = true;
+  $('#vidError').hidden = true; drop.hidden = true;
   video.src = state.url;
-  $('#fileName').textContent = file.name;
-  $('#fileMeta').textContent = fmtBytes(file.size);
-  $('#dropView').hidden = true; $('#editView').hidden = false;
-  $('#joinedOut').hidden = true; $('#exportErr').hidden = true;
-  renderClips(); updateHint();
+  $('#fileBar').innerHTML = `<b>${esc(file.name)}</b><span class="num">${fmtBytes(file.size)}</span>`;
+  $('#addTimes').disabled = false;
+  clearOutputs(); $('#exportErr').hidden = true;
+  renderClips(); setHint();
   loadEngine().catch(() => {}); // warm up in the background; errors surface on export
 }
 video.addEventListener('loadedmetadata', () => {
   state.duration = video.duration;
   $('#tDur').textContent = fmt(state.duration);
-  drawTicks(); renderTimeline();
+  $('#tlEmpty').hidden = true; $('#playhead').hidden = false;
+  layoutTimeline(); renderClips(); buildFilmstrip();
 });
-video.addEventListener('error', () => { $('#vidError').hidden = false; });
+video.addEventListener('error', () => { if(state.url) $('#vidError').hidden = false; });
+
+/* ── thumbnails: seek a hidden copy of the video and grab frames ── */
+let filmToken = 0;
+function once(el, ev, ms = 6000){
+  return new Promise((res, rej) => {
+    const t = setTimeout(() => { el.removeEventListener(ev, h); rej(new Error('timeout')); }, ms);
+    const h = () => { clearTimeout(t); res(); };
+    el.addEventListener(ev, h, { once:true });
+  });
+}
+async function buildFilmstrip(){
+  const token = ++filmToken, d = state.duration;
+  const tv = document.createElement('video');
+  tv.muted = true; tv.preload = 'auto'; tv.playsInline = true; tv.src = state.url;
+  try{
+    await once(tv, 'loadeddata', 15000);
+    const h = 90, w = Math.max(40, Math.round(h * (tv.videoWidth / tv.videoHeight || 16/9)));
+    const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    const ctx = cv.getContext('2d');
+    for(let i = 0; i < FILM_FRAMES; i++){
+      if(token !== filmToken) return;
+      const t = (i + 0.5) * d / FILM_FRAMES;
+      tv.currentTime = t;
+      await once(tv, 'seeked');
+      ctx.drawImage(tv, 0, 0, w, h);
+      state.frames[i] = cv.toDataURL('image/jpeg', 0.7);
+      renderFilm();
+      if(i % 5 === 4 || i === FILM_FRAMES-1) renderClips();
+    }
+  }catch(e){ /* thumbnails are a nicety; the editor works without them */ }
+  finally{ tv.removeAttribute('src'); tv.load(); }
+}
+function frameAt(t){
+  if(!state.duration) return null;
+  const i = clamp(Math.floor(t / state.duration * FILM_FRAMES), 0, FILM_FRAMES-1);
+  return state.frames[i] || state.frames.find(Boolean) || null;
+}
+function renderFilm(){
+  const lane = $('#laneFilm');
+  if(!state.frames.length){ lane.innerHTML = state.duration ? '<span class="none">Making thumbnails…</span>' : ''; return; }
+  lane.innerHTML = state.frames.map((src,i) => src
+    ? `<img src="${src}" alt="" style="left:${i/FILM_FRAMES*100}%;width:${100/FILM_FRAMES+0.05}%">` : '').join('');
+}
 
 /* ── transport ── */
-function seek(t){ video.currentTime = Math.min(Math.max(0,t), state.duration || 0); }
-function togglePlay(){ state.stopAt = null; video.paused ? video.play() : video.pause(); }
+function seek(t){ video.currentTime = clamp(t, 0, state.duration || 0); }
+function togglePlay(){ if(!state.duration) return; state.stopAt = null; video.paused ? video.play() : video.pause(); }
 $('#playBtn').addEventListener('click', togglePlay);
 document.querySelectorAll('[data-step]').forEach(b => b.addEventListener('click', () => { video.pause(); seek(video.currentTime + Number(b.dataset.step)); }));
 $('#rate').addEventListener('change', e => { video.playbackRate = Number(e.target.value); });
 const setPlayIcon = () => {
-  $('#playIcon').innerHTML = video.paused ? '<path d="M7 5v14l11-7z"/>' : '<path d="M8 5v14M16 5v14"/>';
+  $('#playIcon').innerHTML = video.paused ? '<path d="M8 5v14l11-7z"/>' : '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>';
   $('#playBtn').setAttribute('aria-label', video.paused ? 'Play' : 'Pause');
 };
 video.addEventListener('play', setPlayIcon); video.addEventListener('pause', setPlayIcon);
 
+const tlScroll = $('#tlScroll'), tlInner = $('#tlInner');
 function tick(){
   const t = video.currentTime;
   if(state.stopAt != null && t >= state.stopAt){ video.pause(); seek(state.stopAt); state.stopAt = null; }
   $('#tNow').textContent = fmt(t);
-  if(state.duration) $('#playhead').style.left = (t/state.duration*100)+'%';
+  if(state.duration){
+    const pct = t / state.duration;
+    $('#playhead').style.left = (pct*100)+'%';
+    // keep the playhead in view while playing on a zoomed timeline
+    if(!video.paused && !dragging){
+      const x = pct * tlInner.clientWidth, v = tlScroll.scrollLeft, w = tlScroll.clientWidth;
+      if(x < v || x > v + w - 24) tlScroll.scrollLeft = x - w * 0.15;
+    }
+    const c = state.clips.find(c => t >= c.start && t < c.end);
+    const badge = $('#clipBadge');
+    badge.hidden = !c; if(c) badge.textContent = c.name;
+  }
   if(state.pendingIn != null) renderPending();
   requestAnimationFrame(tick);
 }
 requestAnimationFrame(tick);
 
 /* ── timeline ── */
-const track = $('#track');
-function drawTicks(){
-  const d = state.duration, el = $('#ticks'); el.innerHTML = '';
-  if(!d) return;
-  const steps = [1,2,5,10,15,30,60,120,300,600,900,1800];
-  const step = steps.find(s => d/s <= 8) || 3600;
-  for(let t = 0; t <= d; t += step){
-    const s = document.createElement('span');
-    s.style.left = (t/d*100)+'%'; s.textContent = fmt(t).replace(/\.\d+$/,'');
-    el.appendChild(s);
-  }
+function layoutTimeline(){
+  tlInner.style.width = (ZOOMS[state.zoom] * 100) + '%';
+  $('#zoomLbl').textContent = ZOOMS[state.zoom] + '×';
+  $('#zoomOut').disabled = state.zoom === 0;
+  $('#zoomIn').disabled = state.zoom === ZOOMS.length - 1;
+  drawRuler();
 }
+function drawRuler(){
+  const d = state.duration, el = $('#ruler'); el.innerHTML = '';
+  if(!d) return;
+  const pxPerSec = tlInner.clientWidth / d;
+  const steps = [0.5,1,2,5,10,15,30,60,120,300,600,900,1800,3600];
+  const step = steps.find(s => s * pxPerSec >= 80) || 3600;
+  const minor = step / 5;
+  let html = '';
+  for(let t = 0; t <= d + 1e-6; t += minor){
+    const major = Math.abs(t/step - Math.round(t/step)) < 1e-6;
+    const left = (t/d*100)+'%';
+    html += major
+      ? `<span class="t" style="left:${left}">${step < 1 ? fmt(t).replace(/^00:/,'') : fmtShort(t)}</span>`
+      : `<span class="m" style="left:${left}"></span>`;
+  }
+  el.innerHTML = html;
+}
+function setZoom(z, anchorT){
+  z = clamp(z, 0, ZOOMS.length-1);
+  if(z === state.zoom || !state.duration) return;
+  const t = anchorT ?? video.currentTime;
+  const rel = (t / state.duration) * tlInner.clientWidth - tlScroll.scrollLeft;
+  state.zoom = z; layoutTimeline();
+  tlScroll.scrollLeft = (t / state.duration) * tlInner.clientWidth - rel;
+}
+$('#zoomIn').addEventListener('click', () => setZoom(state.zoom + 1));
+$('#zoomOut').addEventListener('click', () => setZoom(state.zoom - 1));
+tlScroll.addEventListener('wheel', e => {
+  if(!(e.ctrlKey || e.metaKey) || !state.duration) return;
+  e.preventDefault();
+  setZoom(state.zoom + (e.deltaY < 0 ? 1 : -1), timeAt(e));
+}, { passive:false });
+addEventListener('resize', () => { if(state.duration) drawRuler(); });
+
 function renderTimeline(){
-  track.querySelectorAll('.seg').forEach(n => n.remove());
-  const d = state.duration; if(!d) return;
-  state.clips.forEach((c,i) => {
-    const s = document.createElement('div');
-    s.className = 'seg' + (c.on ? '' : ' off') + (c.id === state.activeId ? ' active' : '');
-    s.style.left = (c.start/d*100)+'%';
-    s.style.width = Math.max(0.2,(c.end-c.start)/d*100)+'%';
-    s.textContent = i+1; s.title = c.name;
-    track.insertBefore(s, $('#playhead'));
-  });
+  const d = state.duration, lane = $('#laneClips');
+  if(!d){ lane.innerHTML = ''; return; }
+  lane.innerHTML = state.clips.map((c,i) => `
+    <div class="blk${c.on ? '' : ' off'}${c.id === state.selId ? ' sel' : ''}" data-id="${c.id}"
+         style="left:${c.start/d*100}%;width:${Math.max(0.15,(c.end-c.start)/d*100)}%" title="${esc(c.name)} · ${fmt(c.start)}–${fmt(c.end)}">
+      <span class="h s" data-edge="start"></span>
+      <span class="ix">${i+1}</span><span class="nm">${esc(c.name)}</span>
+      <span class="h e" data-edge="end"></span>
+    </div>`).join('') + '<div class="pend" id="pend" hidden></div>';
   renderPending();
 }
 function renderPending(){
-  let p = track.querySelector('.pending');
-  if(state.pendingIn == null || !state.duration){ p?.remove(); return; }
-  if(!p){ p = document.createElement('div'); p.className = 'pending'; track.insertBefore(p, $('#playhead')); }
+  const p = $('#pend'); if(!p) return;
+  if(state.pendingIn == null || !state.duration){ p.hidden = true; return; }
   const a = state.pendingIn, b = Math.max(a, video.currentTime);
+  p.hidden = false;
   p.style.left = (a/state.duration*100)+'%';
-  p.style.width = ((b-a)/state.duration*100)+'%';
+  p.style.width = Math.max(0.15,(b-a)/state.duration*100)+'%';
 }
-let scrubbing = false;
-function scrubTo(e){
-  const r = track.getBoundingClientRect();
-  seek((Math.min(Math.max(e.clientX - r.left, 0), r.width) / r.width) * state.duration);
+function timeAt(e){
+  const r = tlInner.getBoundingClientRect();
+  return clamp((e.clientX - r.left) / r.width, 0, 1) * state.duration;
 }
-track.addEventListener('pointerdown', e => { if(!state.duration) return; scrubbing = true; state.stopAt = null; track.setPointerCapture(e.pointerId); scrubTo(e); });
-track.addEventListener('pointermove', e => { if(scrubbing) scrubTo(e); });
-track.addEventListener('pointerup', () => { scrubbing = false; });
+
+/* One pointer handler for the whole timeline:
+   ruler or empty lane → scrub; clip body → select; clip edge → trim. */
+let dragging = null;
+tlInner.addEventListener('pointerdown', e => {
+  if(!state.duration || e.button > 0) return;
+  const blk = e.target.closest('.blk'), edge = e.target.closest('.h');
+  const onRuler = !!e.target.closest('#ruler');
+  if(blk){
+    const c = state.clips.find(c => c.id === Number(blk.dataset.id));
+    select(c.id, false);
+    if(edge){
+      video.pause(); state.stopAt = null;
+      dragging = { kind:'trim', c, edge: edge.dataset.edge };
+    } else {
+      seek(c.start); return;
+    }
+  } else if(onRuler || e.pointerType !== 'touch'){
+    state.stopAt = null; dragging = { kind:'scrub' }; seek(timeAt(e));
+  } else {
+    return; // touch on a lane: let it scroll; a tap seeks via click
+  }
+  tlInner.setPointerCapture(e.pointerId);
+  e.preventDefault();
+});
+tlInner.addEventListener('pointermove', e => {
+  if(!dragging) return;
+  const t = timeAt(e);
+  if(dragging.kind === 'scrub'){ seek(t); return; }
+  const c = dragging.c;
+  if(dragging.edge === 'start') c.start = clamp(t, 0, c.end - 0.1);
+  else c.end = clamp(t, c.start + 0.1, state.duration);
+  seek(dragging.edge === 'start' ? c.start : c.end);
+  renderTimeline(); updateClipTimes(c);
+});
+const endDrag = () => {
+  if(dragging?.kind === 'trim'){ saveClips(); renderClips(); }
+  dragging = null;
+};
+tlInner.addEventListener('pointerup', endDrag);
+tlInner.addEventListener('pointercancel', endDrag);
+tlInner.addEventListener('click', e => {
+  if(!state.duration || e.target.closest('.blk')) return;
+  if(e.pointerType === 'touch') seek(timeAt(e)); // mouse and pen already seeked on pointerdown
+});
 
 /* ── marking ── */
 function markIn(){
+  if(!state.duration) return;
   state.pendingIn = video.currentTime;
-  $('#cancelMark').hidden = false;
-  updateHint(); renderPending();
+  $('#markIn').classList.add('armed');
+  setHint(); renderPending();
 }
 function markOut(){
+  if(!state.duration) return;
   const t = video.currentTime;
-  if(state.pendingIn == null){ updateHint('Mark a start first. Press I where the section begins.'); return; }
-  if(t - state.pendingIn < 0.1){ updateHint('The end has to be after the start. Play forward a little, then press O.'); return; }
+  if(state.pendingIn == null){ setHint('Mark a start first. Press I where the section begins.'); return; }
+  if(t - state.pendingIn < 0.1){ setHint('The end has to be after the start. Play forward a little, then press O.'); return; }
   const c = { id: state.nextId++, name: `Clip ${state.clips.length+1}`, start: state.pendingIn, end: t, on: true };
   state.clips.push(c);
-  state.pendingIn = null; $('#cancelMark').hidden = true;
-  saveClips(); renderClips(); updateHint(`Added “${c.name}” (${fmt(c.end-c.start)}). Give it a name in the list on the right.`);
+  state.pendingIn = null; $('#markIn').classList.remove('armed');
+  state.selId = c.id;
+  saveClips(); renderClips();
+  setHint(`Added “${c.name}” (${fmtShort(c.end-c.start)}). Rename it in the Clips list.`);
 }
-function clearMark(){ state.pendingIn = null; $('#cancelMark').hidden = true; renderPending(); updateHint(); }
+function clearMark(){ state.pendingIn = null; $('#markIn').classList.remove('armed'); renderPending(); setHint(); }
 $('#markIn').addEventListener('click', markIn);
 $('#markOut').addEventListener('click', markOut);
-$('#cancelMark').addEventListener('click', clearMark);
-function updateHint(msg){
+function setHint(msg){
   const h = $('#hint');
   if(msg){ h.textContent = msg; return; }
+  if(!state.file){ h.textContent = 'Load a video to begin.'; return; }
   h.innerHTML = state.pendingIn != null
-    ? `Start marked at <span class="num">${fmt(state.pendingIn)}</span>. Play to where the section ends, then press <kbd>O</kbd>.`
-    : 'Play the video and press <kbd>I</kbd> where a section starts.';
+    ? `Start marked at <span class="num">${fmt(state.pendingIn)}</span>. Play to where the section ends, then press <kbd>O</kbd>. <kbd>Esc</kbd> clears it.`
+    : 'Press <kbd>I</kbd> where a section starts and <kbd>O</kbd> where it ends.';
 }
 
 document.addEventListener('keydown', e => {
-  if($('#editView').hidden || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(!state.duration || e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target.closest('input,select,textarea')) return;
   const k = e.key;
   if(k === ' '){ e.preventDefault(); togglePlay(); }
@@ -554,89 +715,151 @@ document.addEventListener('keydown', e => {
   else if(k === 'ArrowRight'){ e.preventDefault(); seek(video.currentTime + (e.shiftKey ? 5 : 1)); }
   else if(k === ','){ video.pause(); seek(video.currentTime - FPS_STEP); }
   else if(k === '.'){ video.pause(); seek(video.currentTime + FPS_STEP); }
+  else if(k === '+' || k === '='){ setZoom(state.zoom + 1); }
+  else if(k === '-' || k === '_'){ setZoom(state.zoom - 1); }
 });
 
 /* ── clip list ── */
 const ICON = {
-  play:'<svg viewBox="0 0 24 24"><path d="M7 5v14l11-7z"/></svg>',
-  up:'<svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>',
-  down:'<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
-  del:'<svg viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-  here:'<svg viewBox="0 0 24 24"><path d="M12 3v18M7 8l5-5 5 5"/></svg>',
+  play:'<svg class="i" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  up:'<svg class="i" viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>',
+  down:'<svg class="i" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
+  del:'<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+  here:'<svg class="i" viewBox="0 0 24 24"><path d="M12 20V8M7 13l5-5 5 5M5 4h14"/></svg>',
 };
 const list = $('#clips');
+function select(id, scroll = true){
+  state.selId = id;
+  list.querySelectorAll('.clip').forEach(li => li.classList.toggle('sel', Number(li.dataset.id) === id));
+  renderTimeline();
+  if(scroll) list.querySelector(`.clip[data-id="${id}"]`)?.scrollIntoView({ block:'nearest' });
+}
 function renderClips(){
-  const n = state.clips.length, on = state.clips.filter(c => c.on).length;
-  $('#clipCount').textContent = n ? `${on} of ${n} ticked` : '0 clips';
+  const n = state.clips.length, on = state.clips.filter(c => c.on);
+  $('#clipCount').textContent = n ? `${on.length} of ${n} ticked` : '0';
   if(!n){
-    list.innerHTML = '<li class="empty">No clips yet. Mark a start and an end on the video to add one.</li>';
+    list.innerHTML = `<li class="empty">${state.file ? 'No clips yet. Mark a start and an end on the video, or type times above.' : 'Clips you mark will appear here.'}</li>`;
   } else {
-    list.innerHTML = state.clips.map((c,i) => `
-      <li class="clip${c.id === state.activeId ? ' active' : ''}" data-id="${c.id}">
-        <div class="clip-top">
-          <input type="checkbox" id="on-${c.id}" data-act="on" ${c.on ? 'checked' : ''} aria-label="Include in export">
-          <span class="clip-n num">${i+1}</span>
+    list.innerHTML = state.clips.map((c,i) => {
+      const f = frameAt(c.start);
+      return `
+      <li class="clip${c.id === state.selId ? ' sel' : ''}${c.on ? '' : ' off'}" data-id="${c.id}">
+        <input type="checkbox" id="on-${c.id}" data-act="on" ${c.on ? 'checked' : ''} aria-label="Include ${esc(c.name)} in export">
+        <div class="thumb" style="${f ? `background-image:url(${f})` : ''}"><span>${i+1}</span><em id="dur-${c.id}">${fmtShort(c.end-c.start)}</em></div>
+        <div class="clip-main">
           <input class="clip-name" id="name-${c.id}" data-act="name" value="${esc(c.name)}" aria-label="Clip name">
+          <span class="clip-meta num" id="meta-${c.id}">${fmt(c.start)} → ${fmt(c.end)}</span>
         </div>
-        <div class="clip-times">
-          <div class="tfield"><span class="label">Start</span><div class="row">
+        <div class="clip-edit">
+          <div class="tf"><span class="label">In</span>
             <input class="num" id="start-${c.id}" data-act="start" value="${fmt(c.start)}" aria-label="Start time">
-            <button class="icon-btn" data-act="startHere" title="Set start to the playhead">${ICON.here}</button></div></div>
-          <div class="tfield"><span class="label">End</span><div class="row">
+            <button class="ib sm" data-act="startHere" title="Set start to the playhead">${ICON.here}</button></div>
+          <div class="tf"><span class="label">Out</span>
             <input class="num" id="end-${c.id}" data-act="end" value="${fmt(c.end)}" aria-label="End time">
-            <button class="icon-btn" data-act="endHere" title="Set end to the playhead">${ICON.here}</button></div></div>
-          <span class="clip-dur num">${fmt(c.end-c.start)}</span>
+            <button class="ib sm" data-act="endHere" title="Set end to the playhead">${ICON.here}</button></div>
+          <div class="clip-actions">
+            <button class="ib sm" data-act="preview" title="Play this clip">${ICON.play}</button>
+            <button class="ib sm" data-act="upward" title="Move up" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
+            <button class="ib sm" data-act="downward" title="Move down" ${i === n-1 ? 'disabled' : ''}>${ICON.down}</button>
+            <button class="ib sm danger" data-act="del" title="Delete clip" style="margin-left:auto">${ICON.del}</button>
+          </div>
         </div>
-        <div class="clip-actions">
-          <button class="icon-btn" data-act="preview" title="Play this clip">${ICON.play}</button>
-          <button class="icon-btn" data-act="upward" title="Move up" ${i === 0 ? 'disabled' : ''}>${ICON.up}</button>
-          <button class="icon-btn" data-act="downward" title="Move down" ${i === n-1 ? 'disabled' : ''}>${ICON.down}</button>
-          <button class="icon-btn danger" data-act="del" title="Delete clip">${ICON.del}</button>
-          <span class="clip-out">${c.outUrl ? `<span class="sz num">${fmtBytes(c.outSize)}</span><a href="${c.outUrl}" download="${esc(c.outName)}">Download</a>` : ''}</span>
-        </div>
-      </li>`).join('');
+      </li>`;
+    }).join('');
   }
-  $('#exportBtn').disabled = busy || !on;
-  $('#exportBtn').textContent = on ? `Export ${on} clip${on > 1 ? 's' : ''}` : 'Export';
+  const total = on.reduce((s,c) => s + c.end - c.start, 0);
+  $('#sumN').textContent = on.length;
+  $('#sumT').textContent = fmtShort(total);
+  const label = on.length ? `Export ${on.length} clip${on.length > 1 ? 's' : ''}` : 'Export';
+  for(const b of [$('#exportBtn'), $('#exportTop')]) b.disabled = busy || !on.length;
+  $('#exportBtn').textContent = label;
   renderTimeline();
 }
+function updateClipTimes(c){
+  const m = $(`#meta-${c.id}`); if(m) m.textContent = `${fmt(c.start)} → ${fmt(c.end)}`;
+  const du = $(`#dur-${c.id}`); if(du) du.textContent = fmtShort(c.end-c.start);
+  const s = $(`#start-${c.id}`), e = $(`#end-${c.id}`);
+  if(s) s.value = fmt(c.start); if(e) e.value = fmt(c.end);
+}
 const clipOf = el => state.clips.find(c => c.id === Number(el.closest('.clip')?.dataset.id));
-function invalidate(c){ if(c.outUrl){ URL.revokeObjectURL(c.outUrl); c.outUrl = null; } }
 
 list.addEventListener('click', e => {
-  const b = e.target.closest('button[data-act]'); if(!b) return;
-  const c = clipOf(b), i = state.clips.indexOf(c), act = b.dataset.act;
-  if(act === 'preview'){
-    state.activeId = c.id; seek(c.start); state.stopAt = c.end; video.play();
-    list.querySelectorAll('.clip').forEach(li => li.classList.toggle('active', Number(li.dataset.id) === c.id));
-    renderTimeline(); return;
+  const li = e.target.closest('.clip'); if(!li) return;
+  const c = clipOf(li);
+  const b = e.target.closest('button[data-act]');
+  if(!b){
+    if(!e.target.closest('input') && c.id !== state.selId){ select(c.id, false); seek(c.start); }
+    else if(e.target.closest('input') && c.id !== state.selId) select(c.id, false);
+    return;
   }
+  const i = state.clips.indexOf(c), act = b.dataset.act;
+  if(act === 'preview'){ select(c.id, false); seek(c.start); state.stopAt = c.end; video.play(); return; }
   if(act === 'startHere' || act === 'endHere'){
     const t = video.currentTime;
     if(act === 'startHere' && t < c.end - 0.1) c.start = t;
     else if(act === 'endHere' && t > c.start + 0.1) c.end = t;
-    else { updateHint('The end has to be after the start. Move the playhead and try again.'); return; }
-    invalidate(c);
+    else { setHint('The end has to be after the start. Move the playhead and try again.'); return; }
   }
   if(act === 'upward' && i > 0) [state.clips[i-1], state.clips[i]] = [state.clips[i], state.clips[i-1]];
   if(act === 'downward' && i < state.clips.length-1) [state.clips[i+1], state.clips[i]] = [state.clips[i], state.clips[i+1]];
-  if(act === 'del'){ invalidate(c); state.clips.splice(i,1); }
+  if(act === 'del'){ state.clips.splice(i,1); if(state.selId === c.id) state.selId = null; }
   saveClips(); renderClips();
 });
 list.addEventListener('change', e => {
   const el = e.target, c = clipOf(el); if(!c) return;
   const act = el.dataset.act;
   if(act === 'on'){ c.on = el.checked; saveClips(); renderClips(); return; }
-  if(act === 'name'){ c.name = el.value.trim() || c.name; invalidate(c); saveClips(); return; }
+  if(act === 'name'){ c.name = el.value.trim() || c.name; el.value = c.name; saveClips(); renderTimeline(); return; }
   if(act === 'start' || act === 'end'){
     const t = parseTime(el.value);
     const ok = isFinite(t) && t >= 0 && t <= (state.duration || Infinity) &&
       (act === 'start' ? t < c.end - 0.1 : t > c.start + 0.1);
-    if(!ok){ el.classList.add('bad'); updateHint('Type a time like 1:23.5 that falls inside the video, with the end after the start.'); return; }
-    c[act] = t; invalidate(c); saveClips(); renderClips();
+    if(!ok){ el.classList.add('bad'); setHint('Type a time like 1:23.5 that falls inside the video, with the end after the start.'); return; }
+    c[act] = t; saveClips(); renderClips();
   }
 });
 list.addEventListener('keydown', e => { if(e.key === 'Enter' && e.target.matches('input')) e.target.blur(); });
+
+/* ── add clips by typed time ranges ── */
+const RANGE_RE = /(\d[\d:.]*)\s*(?:-|–|—|to)\s*(\d[\d:.]*)([^,;\n]*)/gi;
+$('#addTimes').addEventListener('click', () => {
+  const text = $('#timesInput').value, msg = $('#timesMsg');
+  const added = [], problems = [];
+  for(const m of text.matchAll(RANGE_RE)){
+    const a = parseTime(m[1]), b = parseTime(m[2]), label = m[3].trim().replace(/^[-–—:]\s*/,'');
+    const raw = `${m[1]}-${m[2]}`;
+    if(!isFinite(a) || !isFinite(b)){ problems.push(`${raw} isn’t a time I can read`); continue; }
+    if(b - a < 0.1){ problems.push(`${raw} ends before it starts`); continue; }
+    if(state.duration && a >= state.duration){ problems.push(`${raw} starts after the video ends (${fmt(state.duration)})`); continue; }
+    const c = { id: state.nextId++, name: label || `Clip ${state.clips.length+1}`, start: a, end: Math.min(b, state.duration || b), on: true };
+    state.clips.push(c); added.push(c);
+  }
+  if(!added.length && !problems.length) problems.push('Type at least one range, like 1:14-1:28');
+  if(added.length){ saveClips(); renderClips(); }
+  msg.classList.toggle('bad', problems.length > 0);
+  msg.textContent = (added.length ? `Added ${added.length} clip${added.length > 1 ? 's' : ''}. ` : '') +
+    (problems.length ? `Skipped: ${problems.join('; ')}.` : '');
+  if(added.length && !problems.length) $('#timesInput').value = '';
+});
+
+/* ── export settings ── */
+/* height = target for the video's short side, so portrait (9:16) videos
+   get 1080×1920 at "1080p", not 608×1080. Never upscales. */
+const QUALITY = {
+  original:{ desc:'Copies the video as it is, so it takes seconds. Cuts land on the nearest keyframe, so a clip can start up to about a second early.' },
+  high:    { crf:18, desc:'Frame-accurate cuts at the original resolution. Re-encodes, so it can take as long as the clip runs, or longer.' },
+  1080:    { crf:21, height:1080, desc:'Frame-accurate cuts, resized to 1080p if the video is bigger. Re-encodes, so it’s slower than Original.' },
+  720:     { crf:23, height:720,  desc:'Frame-accurate cuts at 720p. Good for Instagram and WhatsApp. Faster to export than 1080p.' },
+  480:     { crf:26, height:480,  desc:'Frame-accurate cuts at 480p. The smallest files, for quick previews or slow connections.' },
+};
+function scaleFilter(h){
+  return `scale=w='if(gt(iw,ih),-2,min(${h},iw))':h='if(gt(iw,ih),min(${h},ih),-2)'`;
+}
+const showQDesc = () => { $('#qDesc').textContent = (QUALITY[$('#quality').value] || QUALITY.original).desc; };
+$('#quality').addEventListener('change', showQDesc); showQDesc();
+const MODE_DESC = { separate:'One video file for each ticked clip.', join:'The ticked clips back to back, in list order.' };
+const showModeDesc = () => { $('#modeDesc').textContent = MODE_DESC[document.querySelector('input[name=mode]:checked').value]; };
+document.querySelectorAll('input[name=mode]').forEach(r => r.addEventListener('change', showModeDesc)); showModeDesc();
 
 /* ── engine ── */
 async function blobURL(url, type, onProgress){
@@ -651,25 +874,28 @@ async function blobURL(url, type, onProgress){
   }
   return URL.createObjectURL(new Blob(chunks, { type }));
 }
-function setEngine(html){ $('#engineStatus').innerHTML = html; }
+function setEngine(kind, text){
+  const p = $('#engine'); p.className = 'pill ' + kind;
+  $('#engineText').textContent = text;
+}
 function loadEngine(){
   if(ff) return Promise.resolve(ff);
   if(ffLoading) return ffLoading;
   ffLoading = (async () => {
-    setEngine('Video engine<br><b>downloading…</b>');
+    setEngine('busy', 'Loading engine…');
     const { FFmpeg } = await import(FF_BASE + '/index.js');
     const worker = URL.createObjectURL(new Blob([`import "${FF_BASE}/worker.js";`], { type:'text/javascript' }));
     const coreURL = await blobURL(CORE_BASE + '/ffmpeg-core.js', 'text/javascript');
     const wasmURL = await blobURL(CORE_BASE + '/ffmpeg-core.wasm', 'application/wasm',
-      p => setEngine(`Video engine<br><b class="num">downloading ${Math.round(p*100)}%</b>`));
+      p => setEngine('busy', `Loading engine ${Math.round(p*100)}%`));
     const inst = new FFmpeg();
     await inst.load({ classWorkerURL: worker, coreURL, wasmURL });
     ff = inst;
-    setEngine('Video engine <b>ready</b><br>Videos are never uploaded.');
+    setEngine('ok', 'Engine ready');
     return ff;
   })().catch(err => {
     ffLoading = null;
-    setEngine('Video engine <b>didn’t load</b><br>Check your connection.');
+    setEngine('bad', 'Engine didn’t load');
     throw err;
   });
   return ffLoading;
@@ -696,75 +922,49 @@ async function unmountInput(){
   mounted = null;
 }
 
-/* ── export quality ── */
-/* height = target for the video's short side, so portrait (9:16) videos
-   get 1080×1920 at "1080p", not 608×1080. Never upscales. */
-const QUALITY = {
-  original:{ desc:'Copies the video as it is, so it takes seconds. Cuts land on the nearest keyframe, so a clip can start up to about a second early.' },
-  high:    { crf:18, desc:'Frame-accurate cuts at the original resolution. Re-encodes, so it can take as long as the clip runs, or longer.' },
-  1080:    { crf:21, height:1080, desc:'Frame-accurate cuts, resized to 1080p if the video is bigger. Re-encodes, so it’s slower than Original.' },
-  720:     { crf:23, height:720,  desc:'Frame-accurate cuts at 720p. Good for Instagram and WhatsApp. Faster to export than 1080p.' },
-  480:     { crf:26, height:480,  desc:'Frame-accurate cuts at 480p. The smallest files, for quick previews or slow connections.' },
-};
-function scaleFilter(h){
-  const w = `if(gt(iw,ih),-2,min(${h},iw))`, hh = `if(gt(iw,ih),min(${h},ih),-2)`;
-  return `scale=w='${w}':h='${hh}'`;
-}
-const showQDesc = () => { $('#qDesc').textContent = (QUALITY[$('#quality').value] || QUALITY.original).desc; };
-$('#quality').addEventListener('change', showQDesc); showQDesc();
-
-/* ── add clips by typed times ── */
-const RANGE_RE = /(\d[\d:.]*)\s*(?:-|–|—|to)\s*(\d[\d:.]*)([^,;\n]*)/gi;
-$('#addTimes').addEventListener('click', () => {
-  const text = $('#timesInput').value, msg = $('#timesMsg');
-  const added = [], problems = [];
-  for(const m of text.matchAll(RANGE_RE)){
-    const a = parseTime(m[1]), b = parseTime(m[2]), label = m[3].trim().replace(/^[-–—:]\s*/,'');
-    const raw = `${m[1]}-${m[2]}`;
-    if(!isFinite(a) || !isFinite(b)){ problems.push(`${raw} isn’t a time I can read`); continue; }
-    if(b - a < 0.1){ problems.push(`${raw} ends before it starts`); continue; }
-    if(state.duration && a >= state.duration){ problems.push(`${raw} starts after the video ends (${fmt(state.duration)})`); continue; }
-    const c = { id: state.nextId++, name: label || `Clip ${state.clips.length+1}`, start: a, end: Math.min(b, state.duration || b), on: true };
-    state.clips.push(c); added.push(c);
-  }
-  if(!added.length && !problems.length) problems.push('Type at least one range, like 1:14-1:28');
-  if(added.length){ saveClips(); renderClips(); }
-  msg.classList.toggle('bad', problems.length > 0);
-  msg.textContent = (added.length ? `Added ${added.length} clip${added.length > 1 ? 's' : ''}. ` : '') +
-    (problems.length ? `Skipped: ${problems.join('; ')}.` : '');
-  if(added.length && !problems.length) $('#timesInput').value = '';
-});
-
 /* ── export ── */
-let busy = false;
 function setProgress(frac, text){
-  $('#barFill').style.width = Math.round(Math.min(1,Math.max(0,frac))*100)+'%';
+  $('#barFill').style.width = Math.round(clamp(frac,0,1)*100)+'%';
   if(text != null) $('#pText').textContent = text;
 }
 function triggerDownload(url, name){
   const a = document.createElement('a'); a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
 }
+function clearOutputs(){ outputs.forEach(o => URL.revokeObjectURL(o.url)); outputs = []; renderOutputs(); }
+function addOutput(data, name, type){
+  const url = URL.createObjectURL(new Blob([data.buffer], { type }));
+  outputs.push({ url, name, size: data.byteLength });
+  renderOutputs();
+  triggerDownload(url, name);
+}
+function renderOutputs(){
+  $('#outs').innerHTML = outputs.map(o => `
+    <li><span class="n" title="${esc(o.name)}">${esc(o.name)}</span><span class="s num">${fmtBytes(o.size)}</span>
+    <a href="${o.url}" download="${esc(o.name)}">Download</a></li>`).join('');
+}
 $('#cancelBtn').addEventListener('click', () => {
   if(!ff) return;
   cancelled = true;
   ff.terminate(); ff = null; ffLoading = null; mounted = null;
-  setEngine('Video engine<br><b>restarting…</b>');
   loadEngine().catch(() => {});
 });
+$('#exportTop').addEventListener('click', () => $('#exportBtn').click());
 
 $('#exportBtn').addEventListener('click', async () => {
   const picked = state.clips.filter(c => c.on);
   if(!picked.length || busy) return;
   const mode = document.querySelector('input[name=mode]:checked').value;
   const q = QUALITY[$('#quality').value] || QUALITY.original;
-  const precise = q.crf != null;
+  const reencode = q.crf != null;
   const srcExt = (state.file.name.match(/\.[a-z0-9]+$/i)?.[0] || '.mp4').toLowerCase();
-  const ext = precise ? '.mp4' : (['.mov','.mp4','.m4v','.webm','.mkv'].includes(srcExt) ? srcExt : '.mp4');
+  const ext = reencode ? '.mp4' : (['.mov','.mp4','.m4v','.webm','.mkv'].includes(srcExt) ? srcExt : '.mp4');
+  const mime = ext === '.webm' ? 'video/webm' : ext === '.mov' ? 'video/quicktime' : ext === '.mkv' ? 'video/x-matroska' : 'video/mp4';
+  const faststart = ext === '.webm' || ext === '.mkv' ? [] : ['-movflags','+faststart'];
   const base = state.file.name.replace(/\.[^.]+$/,'');
 
-  busy = true; cancelled = false; renderClips();
-  $('#progress').hidden = false; $('#cancelBtn').hidden = false; $('#exportErr').hidden = true; $('#joinedOut').hidden = true;
+  busy = true; cancelled = false; renderClips(); clearOutputs();
+  $('#progress').hidden = false; $('#cancelBtn').hidden = false; $('#exportErr').hidden = true;
   setProgress(0, 'Loading the video engine…');
   try{
     await loadEngine();
@@ -773,7 +973,7 @@ $('#exportBtn').addEventListener('click', async () => {
     let doneSecs = 0, current = null;
     const onProg = ({ time }) => {
       if(!current) return;
-      const secs = Math.min(current.end - current.start, Math.max(0, time/1e6));
+      const secs = clamp(time/1e6, 0, current.end - current.start);
       setProgress((doneSecs + secs)/total);
     };
     ff.on('progress', onProg);
@@ -785,50 +985,38 @@ $('#exportBtn').addEventListener('click', async () => {
         setProgress(doneSecs/total, `Cutting ${i+1} of ${picked.length}: ${c.name}`);
         const out = `part${i}${ext}`;
         const dur = (c.end - c.start).toFixed(3);
-        const args = precise
+        const args = reencode
           ? ['-ss', c.start.toFixed(3), '-i', inp, '-t', dur, '-map','0:v:0?','-map','0:a:0?',
              ...(q.height ? ['-vf', scaleFilter(q.height)] : []),
              '-c:v','libx264','-preset','veryfast','-crf',String(q.crf),'-pix_fmt','yuv420p',
-             '-c:a','aac','-b:a','160k','-movflags','+faststart', out]
+             '-c:a','aac','-b:a','160k', ...faststart, out]
           : ['-ss', c.start.toFixed(3), '-i', inp, '-t', dur, '-map','0:v:0?','-map','0:a:0?',
-             '-c','copy','-avoid_negative_ts','make_zero',
-             ...(ext === '.webm' || ext === '.mkv' ? [] : ['-movflags','+faststart']), out];
+             '-c','copy','-avoid_negative_ts','make_zero', ...faststart, out];
         const code = await ff.exec(args);
         if(cancelled) break;
-        if(code !== 0) throw new Error(`The engine couldn’t cut “${c.name}”. Try “Frame-accurate” mode.`);
+        if(code !== 0) throw new Error(`The engine couldn’t cut “${c.name}”. Try a quality other than Original.`);
         doneSecs += c.end - c.start;
-        parts.push({ clip:c, file:out });
+        parts.push(out);
         if(mode === 'separate'){
           const data = await ff.readFile(out); await ff.deleteFile(out);
-          invalidate(c);
-          c.outName = `${String(i+1).padStart(2,'0')} ${safeName(c.name)}${ext}`;
-          c.outSize = data.byteLength;
-          c.outUrl = URL.createObjectURL(new Blob([data.buffer], { type: ext === '.webm' ? 'video/webm' : ext === '.mov' ? 'video/quicktime' : 'video/mp4' }));
-          triggerDownload(c.outUrl, c.outName);
-          renderClips();
+          addOutput(data, `${String(i+1).padStart(2,'0')} ${safeName(c.name)}${ext}`, mime);
         }
       }
       if(mode === 'join' && !cancelled){
         setProgress(1, 'Joining clips…');
-        await ff.writeFile('list.txt', new TextEncoder().encode(parts.map(p => `file '${p.file}'`).join('\n')));
+        await ff.writeFile('list.txt', new TextEncoder().encode(parts.map(p => `file '${p}'`).join('\n')));
         const out = 'joined' + ext;
-        const code = await ff.exec(['-f','concat','-safe','0','-i','list.txt','-c','copy',
-          ...(ext === '.webm' || ext === '.mkv' ? [] : ['-movflags','+faststart']), out]);
-        if(code !== 0) throw new Error('The engine couldn’t join the clips. Try “Frame-accurate” mode.');
+        const code = await ff.exec(['-f','concat','-safe','0','-i','list.txt','-c','copy', ...faststart, out]);
+        if(code !== 0) throw new Error('The engine couldn’t join the clips. Try a quality other than Original.');
         const data = await ff.readFile(out);
-        for(const f of [out,'list.txt',...parts.map(p => p.file)]) await ff.deleteFile(f).catch(() => {});
-        const name = `${safeName(base)} (${picked.length} clips joined)${ext}`;
-        const url = URL.createObjectURL(new Blob([data.buffer], { type: ext === '.webm' ? 'video/webm' : 'video/mp4' }));
-        const box = $('#joinedOut');
-        box.querySelector('a') && URL.revokeObjectURL(box.querySelector('a').href);
-        box.innerHTML = `<span class="label">Joined video</span><span class="num" style="color:var(--faint)">${fmtBytes(data.byteLength)}</span><a href="${url}" download="${esc(name)}">Download</a>`;
-        box.hidden = false;
-        triggerDownload(url, name);
+        for(const f of [out, 'list.txt', ...parts]) await ff.deleteFile(f).catch(() => {});
+        addOutput(data, `${safeName(base)} (${picked.length} clips joined)${ext}`, mime);
       }
     } finally {
       ff?.off('progress', onProg);
     }
-    setProgress(cancelled ? 0 : 1, cancelled ? 'Export cancelled.' : (mode === 'join' ? 'Done. Your joined video is downloading.' : 'Done. Each clip is downloading. Use the Download links if your browser blocked any.'));
+    setProgress(cancelled ? 0 : 1, cancelled ? 'Export cancelled.' :
+      (mode === 'join' ? 'Done. Your video is downloading.' : 'Done. If your browser blocked a download, use the links below.'));
   }catch(err){
     if(!cancelled){
       console.error(err);
@@ -841,6 +1029,8 @@ $('#exportBtn').addEventListener('click', async () => {
     if(cancelled) setTimeout(() => { $('#progress').hidden = true; }, 1500);
   }
 });
+
+renderClips();
 </script>
 </body>
 </html>
