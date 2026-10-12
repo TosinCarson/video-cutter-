@@ -223,9 +223,13 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .lb-title{margin-right:auto;min-width:0;display:grid}
 .lb-title b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-title span{font-size:11.5px;color:var(--faint)}
-.lb-body{position:relative;display:grid;place-items:center;padding:14px 68px 18px;min-height:0;overflow:hidden}
-.lb-body img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
-.lb-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);display:grid;place-items:center;cursor:pointer}
+.lb-body{position:relative;min-height:0;overflow:hidden}
+/* Absolutely sized to the body, so any image (even 2574×3218) letterboxes
+   inside the viewport instead of pushing past it. */
+.lb-body img{position:absolute;top:14px;left:68px;width:calc(100% - 136px);height:calc(100% - 32px);object-fit:contain;cursor:zoom-in}
+.lb-body.zoom{overflow:auto;display:grid;place-items:center}
+.lb-body.zoom img{position:static;width:auto;height:auto;max-width:none;cursor:zoom-out;margin:14px}
+.lb-nav{position:fixed;top:55%;z-index:2;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);display:grid;place-items:center;cursor:pointer}
 .lb-nav:hover:not(:disabled){background:var(--raised)}
 .lb-nav:disabled{opacity:.25;cursor:default}
 .lb-nav.prev{left:12px}
@@ -329,7 +333,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
   .clips{overflow:visible}
   .right{overflow:visible}
   .gscroll{overflow:visible}
-  .lb-body{padding:10px 10px 70px}
+  .lb-body img{top:10px;left:10px;width:calc(100% - 20px);height:calc(100% - 80px)}
   .lb-nav{top:auto;bottom:14px;transform:none}
   .keys-sec{display:none}
 }
@@ -493,12 +497,16 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
         <span id="stillUnit">stills per clip, evenly spaced</span>
       </div>
       <label class="chk" id="everyRow" hidden><input type="checkbox" id="everyFrame"> Every frame</label>
-      <span class="label">Format</span>
-      <div class="seg" role="radiogroup" aria-label="Image format">
-        <label><input type="radio" name="sfmt" value="jpg" id="sfJpg" checked><span>JPEG</span></label>
-        <label><input type="radio" name="sfmt" value="png" id="sfPng"><span>PNG</span></label>
-      </div>
       <span class="sub" id="stillsEst"></span>
+    </div>
+    <div class="sec">
+      <span class="label">Still image quality</span>
+      <div class="seg" role="radiogroup" aria-label="Image format">
+        <label><input type="radio" name="sfmt" value="png" id="sfPng" checked><span>PNG · best</span></label>
+        <label><input type="radio" name="sfmt" value="jpg" id="sfJpg"><span>JPEG · smaller</span></label>
+      </div>
+      <label class="chk"><input type="checkbox" id="sharpest" checked> Pick the sharpest nearby frame</label>
+      <span class="sub" id="sqDesc"></span>
     </div>
     <div class="sec" id="qualitySec">
       <label class="label" for="quality">Quality</label>
@@ -532,6 +540,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
         <span><kbd>S</kbd></span><span>Grab this frame to Stills</span>
         <span><kbd>←</kbd><kbd>→</kbd></span><span>Next / previous still (viewer)</span>
         <span><kbd>X</kbd></span><span>Select still (viewer)</span>
+        <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
       </div>
     </div>
   </aside>
@@ -567,6 +576,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
   <div class="lb-top">
     <div class="lb-title"><b id="lbTitle"></b><span class="num" id="lbMeta"></span></div>
     <button class="btn ghost" id="lbSel" title="Select (X)">Select</button>
+    <button class="btn ghost" id="lbZoom" title="Toggle fit / actual size (Z)">100%</button>
     <button class="btn ghost" id="lbJump" title="Show this moment on the Video tab">Show in video</button>
     <button class="btn danger-ghost" id="lbDel">Delete</button>
     <button class="btn" id="lbDl"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Download</button>
@@ -1081,6 +1091,7 @@ const stillOpts = () => ({
   n: clamp(Math.round(Number($('#stillN').value) || 1), 1, 500),
   every: $('#everyFrame').checked,
   fmt: document.querySelector('input[name=sfmt]:checked').value,
+  sharp: $('#sharpest').checked,
 });
 function stillPlan(clips){
   const o = stillOpts();
@@ -1095,22 +1106,33 @@ function stillPlan(clips){
 }
 function showStillsEst(p){
   const el = $('#stillsEst');
-  const per = p.fmt === 'png' ? 2.5 : 0.6; // rough MB per 1080p image
+  // rough bytes per pixel for a video frame: PNG ≈ 1.6, JPEG at 97% ≈ 0.35
+  const px = (video.videoWidth * video.videoHeight) || 1920*1080;
+  const per = px * (p.fmt === 'png' ? 1.6 : 0.35) / 1e6;
   el.classList.toggle('warn', p.tooMany || p.total > 500);
   el.textContent = p.tooMany
     ? `That’s about ${p.total} stills, more than the ${MAX_STILLS} this page can zip at once. Lower the number, or tick fewer clips.`
-    : `${p.approx ? 'About ' : ''}${p.total} still${p.total === 1 ? '' : 's'}, roughly ${Math.max(1, Math.round(p.total*per))} MB at 1080p.` +
+    : `${p.approx ? 'About ' : ''}${p.total} still${p.total === 1 ? '' : 's'}, roughly ${Math.max(1, Math.round(p.total*per))} MB.` +
       (p.every ? (state.fps ? ` Every frame at ${state.fps} fps.` : ' Every frame assumes about 30 per second.') : '') +
-      (p.fmt === 'png' ? ' PNG is lossless but about 4× bigger than JPEG.' : ' JPEG at 95% quality.');
+      (p.sharp && !p.every ? ' Checking for the sharpest frame makes this a few times slower.' : '');
 }
 const syncStillsUI = () => {
   const o = stillOpts();
+  $('#sqDesc').textContent = (o.fmt === 'png'
+      ? 'PNG keeps every pixel exactly as the video decoded it. Files are about 4× bigger than JPEG.'
+      : 'JPEG at 97% quality. Hard to tell apart from PNG, at a quarter of the size.') +
+    (o.sharp ? ' Each still is the least blurry of up to 7 frames around the chosen moment, which helps when hands or tools are moving.' : '');
+  try{ localStorage.setItem('clipcutter-stillq', JSON.stringify({ fmt:o.fmt, sharp:o.sharp })); }catch(e){}
   $('#stillUnit').textContent = o.mode === 'count' ? 'stills per clip, evenly spaced' : 'stills per second';
   $('#everyRow').hidden = o.mode !== 'rate';
   $('#stillN').disabled = o.mode === 'rate' && o.every;
   renderClips();
 };
-document.querySelectorAll('input[name=smode],input[name=sfmt],#everyFrame').forEach(el => el.addEventListener('change', syncStillsUI));
+try{
+  const q = JSON.parse(localStorage.getItem('clipcutter-stillq') || 'null');
+  if(q){ document.querySelector(`input[name=sfmt][value="${q.fmt}"]`)?.click(); $('#sharpest').checked = q.sharp !== false; }
+}catch(e){}
+document.querySelectorAll('input[name=smode],input[name=sfmt],#everyFrame,#sharpest').forEach(el => el.addEventListener('change', syncStillsUI));
 $('#stillN').addEventListener('input', syncStillsUI);
 syncStillsUI();
 
@@ -1338,7 +1360,8 @@ async function detectFps(){
 /* Draw a frame from a <video> onto a canvas, framed like the video export. */
 function drawFramed(src){
   const w = src.videoWidth, h = src.videoHeight;
-  const cv = document.createElement('canvas'), ctx = cv.getContext('2d');
+  // alpha:false → opaque canvas, so PNGs are saved as RGB rather than RGBA
+  const cv = document.createElement('canvas'), ctx = cv.getContext('2d', { alpha: false });
   if(crop.ratio !== 'original' && crop.fit === 'crop'){
     const r = cropRect(); cv.width = r.w; cv.height = r.h;
     ctx.drawImage(src, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
@@ -1356,7 +1379,7 @@ function drawFramed(src){
 const canvasBlob = (cv, type, q) => new Promise(r => cv.toBlob(r, type, q));
 async function addStill(cv, t, gid, fmtName){
   const png = fmtName === 'png';
-  const blob = await canvasBlob(cv, png ? 'image/png' : 'image/jpeg', png ? undefined : 0.95);
+  const blob = await canvasBlob(cv, png ? 'image/png' : 'image/jpeg', png ? undefined : 0.97);
   if(!blob) throw new Error('This browser couldn’t read that frame.');
   const k = Math.min(1, 480 / Math.max(cv.width, cv.height));
   const tc = document.createElement('canvas');
@@ -1367,6 +1390,40 @@ async function addStill(cv, t, gid, fmtName){
     ext: png ? 'png' : 'jpg', base: safeName(state.file.name.replace(/\.[^.]+$/,'')) };
   stills.push(s);
   return s;
+}
+
+/* Sharpness = variance of the Laplacian on a small greyscale copy. Motion
+   blur and soft focus flatten edges, so a blurrier frame scores lower. */
+const sharpCv = document.createElement('canvas');
+function sharpness(src){
+  const W = 480, H = Math.max(2, Math.round(W * src.videoHeight / src.videoWidth));
+  sharpCv.width = W; sharpCv.height = H;
+  const c = sharpCv.getContext('2d', { willReadFrequently: true });
+  c.drawImage(src, 0, 0, W, H);
+  const d = c.getImageData(0, 0, W, H).data, g = new Float32Array(W * H);
+  for(let i = 0; i < W * H; i++) g[i] = 0.299 * d[i*4] + 0.587 * d[i*4+1] + 0.114 * d[i*4+2];
+  let sum = 0, sq = 0, n = 0;
+  for(let y = 1; y < H - 1; y++) for(let x = 1; x < W - 1; x++){
+    const i = y * W + x, l = 4 * g[i] - g[i-1] - g[i+1] - g[i-W] - g[i+W];
+    sum += l; sq += l * l; n++;
+  }
+  const m = sum / n; return sq / n - m * m;
+}
+/* Look at up to 3 frames either side of t (kept inside lo–hi) and leave
+   the video sitting on the sharpest one. Returns its time. */
+async function seekSharpest(v, t, lo, hi){
+  const fps = state.fps || ASSUMED_FPS, f0 = Math.floor(t * fps);
+  const cand = [];
+  for(let j = -3; j <= 3; j++){ const tt = (f0 + j + 0.5) / fps; if(tt >= lo && tt <= hi) cand.push(tt); }
+  if(cand.length < 2){ v.currentTime = t; await once(v, 'seeked', 10000); return t; }
+  let best = cand[0], bestScore = -1;
+  for(const tt of cand){
+    if(cancelled) break;
+    v.currentTime = tt; await once(v, 'seeked', 10000);
+    const sc = sharpness(v); if(sc > bestScore){ bestScore = sc; best = tt; }
+  }
+  if(v.currentTime !== best){ v.currentTime = best; await once(v, 'seeked', 10000); }
+  return best;
 }
 
 /* A hidden copy of the video for batch grabs, so the preview doesn't jump. */
@@ -1384,10 +1441,18 @@ async function grabFrame(){
   const t = video.currentTime;
   try{
     if(!groups.some(g => g.id === GRAB_GROUP)) groups.push({ id: GRAB_GROUP, title: 'Grabbed frames', sub: 'One at a time from the Video tab' });
-    const s = await addStill(drawFramed(video), t, GRAB_GROUP, stillOpts().fmt);
+    const o = stillOpts();
     const st = $('#stage'); st.classList.remove('flash'); void st.offsetWidth; st.classList.add('flash');
+    let src = video, at = t;
+    if(o.sharp){
+      src = await captureVideo();
+      at = await seekSharpest(src, t, 0, state.duration);
+    }
+    const s = await addStill(drawFramed(src), at, GRAB_GROUP, o.fmt);
     renderGallery();
-    toast(`Frame at ${fmt(t)} added to Stills (${s.w}×${s.h})`, { action: 'View', onAction: () => showTab('stills') });
+    const moved = Math.round((at - t) * (state.fps || ASSUMED_FPS));
+    toast(`Added ${s.w}×${s.h} still at ${fmt(at)}${moved ? ` (sharpest frame, ${moved > 0 ? '+' : ''}${moved})` : ''}`,
+      { action: 'View', onAction: () => showTab('stills') });
   }catch(err){ setHint(err.message); }
 }
 $('#grabBtn').addEventListener('click', grabFrame);
@@ -1413,9 +1478,13 @@ async function runStills(picked){
       for(const [k,t] of times.entries()){
         if(cancelled) break;
         setProgress(made / Math.max(o.total, made + 1), `${c.name}: still ${k+1} of ${times.length}`);
-        v.currentTime = t;
-        await once(v, 'seeked', 10000);
-        await addStill(drawFramed(v), t, gid, o.fmt);
+        let at = t;
+        if(o.sharp && !o.every){
+          const half = (o.mode === 'count' ? d / o.n : 1 / o.n) / 2;
+          at = await seekSharpest(v, t, Math.max(c.start, t - half + 1e-3), Math.min(c.end, t + half - 1e-3));
+        } else { v.currentTime = t; await once(v, 'seeked', 10000); }
+        if(cancelled) break;
+        await addStill(drawFramed(v), at, gid, o.fmt);
         made++;
         if(k % 3 === 0 || k === times.length - 1) renderGallery();
       }
@@ -1557,13 +1626,29 @@ function flushUndo(){
 
 /* ── viewer ── */
 function openLb(id){ lbIndex = orderedStills().findIndex(s => s.id === id); $('#lb').hidden = false; renderLb(); $('#lbClose').focus(); }
-function closeLb(){ $('#lb').hidden = true; }
+function closeLb(){ $('#lb').hidden = true; $('#lbBody').classList.remove('zoom'); }
+function toggleZoom(e){
+  const body = $('#lbBody'), img = $('#lbImg'), on = !body.classList.contains('zoom');
+  // keep the clicked spot under the pointer when zooming in
+  const r = img.getBoundingClientRect();
+  const fx = e?.clientX != null ? clamp((e.clientX - r.left) / r.width, 0, 1) : 0.5;
+  const fy = e?.clientY != null ? clamp((e.clientY - r.top) / r.height, 0, 1) : 0.5;
+  body.classList.toggle('zoom', on);
+  $('#lbZoom').textContent = on ? 'Fit' : '100%';
+  if(on){
+    body.scrollLeft = img.naturalWidth * fx - body.clientWidth / 2;
+    body.scrollTop = img.naturalHeight * fy - body.clientHeight / 2;
+  }
+}
+$('#lbImg').addEventListener('click', toggleZoom);
+$('#lbZoom').addEventListener('click', () => toggleZoom());
 function renderLb(){
   const list = orderedStills();
   if(!list.length){ closeLb(); return; }
   lbIndex = clamp(lbIndex, 0, list.length - 1);
   const s = list[lbIndex], g = groups.find(g => g.id === s.gid);
   $('#lbImg').src = s.url;
+  $('#lbZoom').textContent = $('#lbBody').classList.contains('zoom') ? 'Fit' : '100%';
   $('#lbImg').alt = `Still at ${fmt(s.t)}`;
   $('#lbTitle').textContent = `${g?.title || 'Still'} · ${fmt(s.t)}`;
   $('#lbMeta').textContent = `${lbIndex + 1} of ${list.length} · ${s.w}×${s.h} · ${s.ext.toUpperCase()} · ${fmtBytes(s.blob.size)}`;
@@ -1588,6 +1673,7 @@ function lbKey(e){
   else if(k === 'ArrowRight'){ e.preventDefault(); lbStep(1); }
   else if(k === 'x' || k === 'X' || (k === ' ' && !e.target.closest('button'))){ e.preventDefault(); $('#lbSel').click(); }
   else if(k === 'd' || k === 'D'){ $('#lbDl').click(); }
+  else if(k === 'z' || k === 'Z'){ toggleZoom(); }
 }
 
 /* ── toast ── */
