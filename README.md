@@ -13,6 +13,15 @@ A browser tool for cutting videos into clips.
 
 Cutting runs in your browser with [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm), so videos are never uploaded. The first visit downloads the engine (about 31 MB) from jsDelivr, and the browser caches it after that.
 
+**Stills**
+
+Grab full-resolution images from your video and browse them in the **Stills** tab.
+
+- Press **S** or **Grab frame** to add the frame you're on.
+- To grab many at once, tick clips, choose **Stills** under Export as, and pick either a set number per clip or a number per second (up to every frame). Choose JPEG (95% quality) or PNG (lossless).
+- In the gallery, click a still to view it full size (←/→ to flip through, X to select, D to download). Select stills individually, with Shift-click for a range, or a whole group at once, then download one, the selection, or everything. More than one comes as a ZIP.
+- Stills use the same aspect ratio and framing as video exports. They live in the page until you close or reload it, so download the ones you want to keep.
+
 **Aspect ratio**
 
 Export as Original, 9:16, 4:5, 1:1 or 16:9. **Crop to fill** trims the picture; drag the frame on the preview to choose what stays in the shot. **Fit with bars** keeps the whole picture and adds black bars. Either one re-encodes the video.
