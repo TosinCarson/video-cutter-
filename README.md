@@ -18,6 +18,8 @@ Cutting runs in your browser with [ffmpeg.wasm](https://github.com/ffmpegwasm/ff
 Grab full-resolution images from your video and browse them in the **Stills** tab.
 
 - Press **S** or **Grab frame** to add the frame you're on.
+- On the Stills tab, drag any point on the timeline up into the grid to add it as a still. Slide along the timeline first to fine-tune the moment; once you move up, it's locked. Double-clicking the timeline or **+ Add still at** also works.
+- **Hide timeline** (or **T**) gives the video or the gallery the full height.
 - To grab many at once, tick clips, choose **Stills** under Export as, and pick either a set number per clip or a number per second (up to every frame). Choose PNG (lossless, the default) or JPEG (97% quality, smaller). **Pick the sharpest nearby frame** (on by default) checks up to 3 frames either side of each moment and keeps the least blurry one.
 - In the gallery, click a still to view it full size (←/→ to flip through, X to select, D to download, Z or click to toggle 100% zoom). Select stills individually, with Shift-click for a range, or a whole group at once, then download one, the selection, or everything. More than one comes as a ZIP.
 - Stills use the same aspect ratio and framing as video exports. They live in the page until you close or reload it, so download the ones you want to keep.

@@ -284,6 +284,24 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 
 /* timeline */
 .tl{grid-area:tl;display:flex;flex-direction:column}
+.app.tl-off{grid-template-rows:52px minmax(0,1fr)}
+.app.tl-off .tl{display:none}
+.ctabs .spacer{flex:1}
+.ctab.tgl[aria-pressed="false"]{color:var(--faint)}
+.tl-add{height:26px;padding:0 10px;font-size:11.5px;margin-left:8px}
+/* timeline → stills drag */
+.app.stills-tab .lane-film,.app.stills-tab .lane-clips{cursor:grab}
+.app.stills-tab .lane-film{box-shadow:inset 0 0 0 1px var(--accent-soft)}
+.peek{position:fixed;z-index:70;pointer-events:none;background:var(--raised);border:1px solid var(--line);border-radius:8px;padding:4px;
+  box-shadow:0 10px 30px rgba(0,0,0,.5);display:grid;gap:4px;transform:translate(-50%,calc(-100% - 14px))}
+.peek img{display:block;width:150px;max-height:170px;object-fit:contain;border-radius:5px;background:var(--stage)}
+.peek span{font:500 11px var(--mono);text-align:center;color:var(--text)}
+.peek.drag{transform:translate(-50%,-50%) rotate(-2deg);border-color:var(--accent);cursor:grabbing}
+.peek.drag.over{transform:translate(-50%,-50%) scale(1.05);box-shadow:0 0 0 2px var(--accent),0 14px 36px rgba(0,0,0,.55)}
+body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:none}
+.dropzone{position:absolute;inset:8px;border:2px dashed var(--accent);border-radius:10px;background:var(--accent-soft);z-index:5;
+  display:grid;place-items:center;pointer-events:none;font-weight:700;font-size:15px;color:var(--text)}
+#stillsView{position:relative}
 .tl-bar{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--line)}
 .tl-bar .zoom{font-size:11px;color:var(--faint);width:40px;text-align:center}
 .tl-bar .tl-hint{margin-left:auto;font-size:11.5px;color:var(--faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
@@ -330,6 +348,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
   .controls{grid-template-columns:1fr auto;padding:10px 16px 4px}
   .controls .transport{grid-column:1 / -1;grid-row:2;justify-content:center;flex-wrap:wrap}
   .tl{height:220px}
+  .app.tl-off{grid-template-rows:auto}
   .clips{overflow:visible}
   .right{overflow:visible}
   .gscroll{overflow:visible}
@@ -386,6 +405,9 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>Video</button>
       <button class="ctab" role="tab" id="tabStills" aria-selected="false" aria-controls="stillsView">
         <svg class="i" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Stills <span class="badge num" id="stillCount" hidden>0</span></button>
+      <span class="spacer"></span>
+      <button class="ctab tgl" id="tlToggle" aria-pressed="true" title="Show or hide the timeline (T)">
+        <svg class="i" viewBox="0 0 24 24"><rect x="3" y="13" width="18" height="7" rx="1.5"/><path d="M3 9h18M7 5v4M12 5v4M17 5v4"/></svg><span id="tlToggleTxt">Hide timeline</span></button>
     </div>
     <div class="view" id="videoView" role="tabpanel" aria-labelledby="tabVideo">
     <div class="stage" id="stage">
@@ -450,6 +472,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
         </div>
         <div id="gGroups"></div>
       </div>
+      <div class="dropzone" id="dropzone" hidden>Drop to add this frame as a still</div>
     </div>
   </main>
 
@@ -465,7 +488,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
     <div class="sec">
       <span class="label">Export as</span>
       <div class="seg" role="radiogroup" aria-label="Export as">
-        <label><input type="radio" name="mode" value="separate" id="modeSeparate" checked><span>Separate files</span></label>
+        <label><input type="radio" name="mode" value="separate" id="modeSeparate" checked><span>Separate</span></label>
         <label><input type="radio" name="mode" value="join" id="modeJoin"><span>One video</span></label>
         <label><input type="radio" name="mode" value="stills" id="modeStills"><span>Stills</span></label>
       </div>
@@ -541,6 +564,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
         <span><kbd>←</kbd><kbd>→</kbd></span><span>Next / previous still (viewer)</span>
         <span><kbd>X</kbd></span><span>Select still (viewer)</span>
         <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
+        <span><kbd>T</kbd></span><span>Show / hide timeline</span>
       </div>
     </div>
   </aside>
@@ -551,7 +575,8 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
       <button class="ib sm" id="zoomOut" title="Zoom out (−)" aria-label="Zoom out"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
       <span class="zoom num" id="zoomLbl">1×</span>
       <button class="ib sm" id="zoomIn" title="Zoom in (+)" aria-label="Zoom in"><svg class="i" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
-      <span class="tl-hint">Click to jump. Drag a clip’s edges to trim it.</span>
+      <button class="btn tl-add" id="tlAdd" hidden title="Add the frame at the playhead to Stills">+ Add still at <span class="num" id="tlAddT">00:00.00</span></button>
+      <span class="tl-hint" id="tlHint">Click to jump. Drag a clip’s edges to trim it.</span>
     </div>
     <div class="tl-body">
       <div class="tl-labels">
@@ -589,6 +614,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="peek" id="peek" hidden><img id="peekImg" alt=""><span id="peekT"></span></div>
 
 <script type="module">
 /* ── ffmpeg.wasm, loaded from jsDelivr on first use ───────────────
@@ -736,6 +762,7 @@ function tick(){
   const t = video.currentTime;
   if(state.stopAt != null && t >= state.stopAt){ video.pause(); seek(state.stopAt); state.stopAt = null; }
   $('#tNow').textContent = fmt(t);
+  if(!$('#tlAdd').hidden) $('#tlAddT').textContent = fmt(t);
   if(state.duration){
     const pct = t / state.duration;
     $('#playhead').style.left = (pct*100)+'%';
@@ -823,9 +850,17 @@ function timeAt(e){
 /* One pointer handler for the whole timeline:
    ruler or empty lane → scrub; clip body → select; clip edge → trim. */
 let dragging = null;
+const onStillsTab = () => !$('#stillsView').hidden;
 tlInner.addEventListener('pointerdown', e => {
   if(!state.duration || e.button > 0) return;
   const blk = e.target.closest('.blk'), edge = e.target.closest('.h');
+  if(onStillsTab() && !edge && (e.pointerType !== 'touch' || e.target.closest('#ruler'))){
+    state.stopAt = null;
+    dragging = { kind:'still', x:e.clientX, y:e.clientY, t:timeAt(e), moved:false };
+    seek(dragging.t);
+    tlInner.setPointerCapture(e.pointerId); e.preventDefault();
+    return;
+  }
   const onRuler = !!e.target.closest('#ruler');
   if(blk){
     const c = state.clips.find(c => c.id === Number(blk.dataset.id));
@@ -844,8 +879,37 @@ tlInner.addEventListener('pointerdown', e => {
   tlInner.setPointerCapture(e.pointerId);
   e.preventDefault();
 });
+const peek = $('#peek');
+function showPeek(t, x, y, drag){
+  const f = frameAt(t);
+  peek.hidden = false; peek.classList.toggle('drag', !!drag);
+  if(f) $('#peekImg').src = f; $('#peekImg').hidden = !f;
+  $('#peekT').textContent = fmt(t);
+  peek.style.left = x + 'px'; peek.style.top = y + 'px';
+}
+const overStills = (x, y) => { const r = $('#stillsView').getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
+const overTimeline = (x, y) => { const r = tlScroll.getBoundingClientRect(); return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom; };
 tlInner.addEventListener('pointermove', e => {
-  if(!dragging) return;
+  if(!dragging){
+    // hover preview of the frame under the pointer, on the Stills tab
+    if(onStillsTab() && state.duration && e.pointerType === 'mouse' && !e.target.closest('.blk')) showPeek(timeAt(e), e.clientX, tlScroll.getBoundingClientRect().top, false);
+    return;
+  }
+  if(dragging.kind === 'still'){
+    const d = dragging;
+    if(!d.moved && Math.hypot(e.clientX - d.x, e.clientY - d.y) > 6){ d.moved = true; document.body.classList.add('dragging-still'); }
+    if(!d.moved) return;
+    // Sliding sideways along the row you started on picks the moment. Once
+    // the pointer heads up toward the grid, the moment is locked, so a
+    // diagonal exit doesn't drag the time along with it.
+    if(!d.locked && Math.abs(e.clientY - d.y) > 24) d.locked = true;
+    if(!d.locked && overTimeline(e.clientX, e.clientY)){ d.t = timeAt(e); seek(d.t); }
+    const over = overStills(e.clientX, e.clientY);
+    $('#dropzone').hidden = !over;
+    showPeek(d.t, e.clientX, e.clientY, true);
+    peek.classList.toggle('over', over);
+    return;
+  }
   const t = timeAt(e);
   if(dragging.kind === 'scrub'){ seek(t); return; }
   const c = dragging.c;
@@ -854,12 +918,23 @@ tlInner.addEventListener('pointermove', e => {
   seek(dragging.edge === 'start' ? c.start : c.end);
   renderTimeline(); updateClipTimes(c);
 });
-const endDrag = () => {
+const endDrag = e => {
   if(dragging?.kind === 'trim'){ saveClips(); renderClips(); }
+  if(dragging?.kind === 'still'){
+    const d = dragging;
+    if(d.moved && e?.type === 'pointerup' && overStills(e.clientX, e.clientY)) grabAt(d.t);
+    document.body.classList.remove('dragging-still');
+    $('#dropzone').hidden = true; peek.hidden = true; peek.classList.remove('over');
+  }
   dragging = null;
 };
 tlInner.addEventListener('pointerup', endDrag);
 tlInner.addEventListener('pointercancel', endDrag);
+tlInner.addEventListener('pointerleave', () => { if(!dragging) peek.hidden = true; });
+tlInner.addEventListener('dblclick', e => {
+  if(!onStillsTab() || !state.duration || e.target.closest('.blk')) return;
+  grabAt(timeAt(e));
+});
 tlInner.addEventListener('click', e => {
   if(!state.duration || e.target.closest('.blk')) return;
   if(e.pointerType === 'touch') seek(timeAt(e)); // mouse and pen already seeked on pointerdown
@@ -901,6 +976,7 @@ document.addEventListener('keydown', e => {
   if(!$('#lb').hidden){ lbKey(e); return; }
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target.closest('input,select,textarea')) return;
+  if(k === 't' || k === 'T'){ setTimeline(document.querySelector('.app').classList.contains('tl-off')); return; }
   if(!$('#stillsView').hidden){
     if(k === 'a' || k === 'A'){ e.preventDefault(); toggleSelectAll(); }
     else if(k === 'Delete'){ deleteStills(stills.filter(s => s.sel)); }
@@ -1436,26 +1512,41 @@ async function captureVideo(){
   return capVid = v;
 }
 
-async function grabFrame(){
+/* Add a still at any time. From the Video tab (S / Grab frame) it uses the
+   preview frame; from the timeline it reads the hidden copy. Grabs are
+   queued so quick drags never fight over the hidden video. */
+let grabQueue = Promise.resolve();
+function grabAt(t, { fromPreview = false } = {}){
   if(!state.duration || !video.videoWidth) return;
-  const t = video.currentTime;
-  try{
-    if(!groups.some(g => g.id === GRAB_GROUP)) groups.push({ id: GRAB_GROUP, title: 'Grabbed frames', sub: 'One at a time from the Video tab' });
-    const o = stillOpts();
-    const st = $('#stage'); st.classList.remove('flash'); void st.offsetWidth; st.classList.add('flash');
-    let src = video, at = t;
-    if(o.sharp){
-      src = await captureVideo();
-      at = await seekSharpest(src, t, 0, state.duration);
-    }
-    const s = await addStill(drawFramed(src), at, GRAB_GROUP, o.fmt);
-    renderGallery();
-    const moved = Math.round((at - t) * (state.fps || ASSUMED_FPS));
-    toast(`Added ${s.w}×${s.h} still at ${fmt(at)}${moved ? ` (sharpest frame, ${moved > 0 ? '+' : ''}${moved})` : ''}`,
-      { action: 'View', onAction: () => showTab('stills') });
-  }catch(err){ setHint(err.message); }
+  if(stillsRunning){ toast('Wait for the current batch of stills to finish.'); return; }
+  grabQueue = grabQueue.then(async () => {
+    try{
+      if(!groups.some(g => g.id === GRAB_GROUP)) groups.push({ id: GRAB_GROUP, title: 'Grabbed frames', sub: 'From Grab frame and the timeline' });
+      const o = stillOpts();
+      let src = video, at = t;
+      if(o.sharp || !fromPreview){
+        src = await captureVideo();
+        if(o.sharp) at = await seekSharpest(src, t, 0, state.duration);
+        else { src.currentTime = t; await once(src, 'seeked', 10000); }
+      }
+      const s = await addStill(drawFramed(src), at, GRAB_GROUP, o.fmt);
+      renderGallery();
+      const moved = Math.round((at - t) * (state.fps || ASSUMED_FPS));
+      const msg = `Added ${s.w}×${s.h} still at ${fmt(at)}${moved ? ` (sharpest frame, ${moved > 0 ? '+' : ''}${moved})` : ''}`;
+      $('#stillsView').hidden ? toast(msg, { action: 'View', onAction: () => showTab('stills') }) : toast(msg);
+      // bring the new tile into view
+      document.querySelector(`.tile[data-id="${s.id}"]`)?.scrollIntoView({ block:'nearest', behavior:'smooth' });
+    }catch(err){ toast(err.message === 'timeout' ? 'The browser didn’t return that frame. Try again.' : err.message); }
+  });
+  return grabQueue;
+}
+function grabFrame(){
+  if(!state.duration) return;
+  const st = $('#stage'); st.classList.remove('flash'); void st.offsetWidth; st.classList.add('flash');
+  grabAt(video.currentTime, { fromPreview: true });
 }
 $('#grabBtn').addEventListener('click', grabFrame);
+$('#tlAdd').addEventListener('click', () => grabAt(video.currentTime));
 
 async function runStills(picked){
   const o = stillPlan(picked);
@@ -1511,7 +1602,24 @@ function showTab(which){
   $('#videoView').hidden = !vid; $('#stillsView').hidden = vid;
   $('#tabVideo').setAttribute('aria-selected', vid); $('#tabStills').setAttribute('aria-selected', !vid);
   if(!vid) video.pause(); else requestAnimationFrame(layoutCrop);
+  document.querySelector('.app').classList.toggle('stills-tab', !vid);
+  $('#tlAdd').hidden = vid || !state.duration;
+  $('#tlHint').textContent = vid
+    ? 'Click to jump. Drag a clip’s edges to trim it.'
+    : 'Drag any point on the timeline up into the grid to add it as a still. Double-click works too.';
 }
+
+/* ── show / hide the timeline ── */
+function setTimeline(on){
+  document.querySelector('.app').classList.toggle('tl-off', !on);
+  $('#tlToggle').setAttribute('aria-pressed', on);
+  $('#tlToggleTxt').textContent = on ? 'Hide timeline' : 'Show timeline';
+  try{ localStorage.setItem('clipcutter-timeline', on ? '1' : '0'); }catch(e){}
+  if(on) requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); });
+  else requestAnimationFrame(layoutCrop);
+}
+$('#tlToggle').addEventListener('click', () => setTimeline(document.querySelector('.app').classList.contains('tl-off')));
+try{ if(localStorage.getItem('clipcutter-timeline') === '0') setTimeline(false); }catch(e){}
 $('#tabVideo').addEventListener('click', () => showTab('video'));
 $('#tabStills').addEventListener('click', () => showTab('stills'));
 
