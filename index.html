@@ -81,6 +81,7 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .logo{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:#fff}
 .logo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .file{flex:1;min-width:0;display:flex;justify-content:center;align-items:center;gap:10px;color:var(--muted)}
+.file .ib.sm{margin-left:-4px}
 .file b{color:var(--text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:40ch}
 .top-r{display:flex;align-items:center;gap:10px}
 .pill{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px;border-radius:13px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px;color:var(--muted);white-space:nowrap}
@@ -664,6 +665,38 @@ function loadClips(){
   try{ const v = JSON.parse(localStorage.getItem(storeKey()) || '[]'); return Array.isArray(v) ? v : []; }catch(e){ return []; }
 }
 
+/* ── on-device storage (IndexedDB) ──
+   Browsers drop a picked file on refresh, so the last video and all stills
+   are copied into this browser's own storage. Nothing leaves the computer. */
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp ||= new Promise((res, rej) => {
+    const r = indexedDB.open('clipcutter', 1);
+    r.onupgradeneeded = () => { r.result.createObjectStore('kv'); r.result.createObjectStore('blobs'); };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  const run = async (store, mode, fn) => {
+    const db = await open();
+    return new Promise((res, rej) => {
+      const t = db.transaction(store, mode), req = fn(t.objectStore(store));
+      t.oncomplete = () => res(req?.result);
+      t.onerror = t.onabort = () => rej(t.error);
+    });
+  };
+  return {
+    get: (store, k) => run(store, 'readonly', st => st.get(k)),
+    keys: store => run(store, 'readonly', st => st.getAllKeys()),
+    put: (store, k, v) => run(store, 'readwrite', st => st.put(v, k)),
+    del: (store, k) => run(store, 'readwrite', st => st.delete(k)),
+  };
+})();
+let persistOK = typeof indexedDB !== 'undefined';
+let restoring = true; // don't write the (still empty) gallery over the saved one while it loads
+const keepFailed = err => { console.warn('Storage failed', err); persistOK = false; };
+let askedPersist = false;
+function askPersist(){ if(askedPersist) return; askedPersist = true; navigator.storage?.persist?.().catch(() => {}); }
+
 /* ── loading a file ── */
 const fileInput = $('#fileInput'), drop = $('#drop');
 fileInput.addEventListener('change', () => { if(fileInput.files[0]) openFile(fileInput.files[0]); fileInput.value = ''; });
@@ -672,7 +705,7 @@ $('#openBtn').addEventListener('click', () => fileInput.click());
 ['dragleave','drop'].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
 document.addEventListener('drop', e => { const f = e.dataTransfer?.files?.[0]; if(f) openFile(f); });
 
-async function openFile(file){
+async function openFile(file, { restored = false } = {}){
   if(busy) return;
   if(!/^video\//.test(file.type) && !/\.(mov|mp4|m4v|webm|mkv)$/i.test(file.name)){
     setHint('That file doesn’t look like a video. Choose an MP4, MOV or WebM file.');
@@ -686,12 +719,35 @@ async function openFile(file){
   state.nextId = state.clips.reduce((m,c) => Math.max(m,c.id), 0) + 1;
   $('#vidError').hidden = true; drop.hidden = true;
   video.src = state.url;
-  $('#fileBar').innerHTML = `<b>${esc(file.name)}</b><span class="num">${fmtBytes(file.size)}</span>`;
+  $('#fileBar').innerHTML = `<b>${esc(file.name)}</b><span class="num">${fmtBytes(file.size)}</span>
+    <button class="ib sm" id="closeVid" title="Close this video (it won’t reopen next time)" aria-label="Close video"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+  if(restored) toast(`Reopened ${file.name} from last time`);
+  else if(persistOK){
+    askPersist();
+    idb.put('kv', 'video', { blob: file, name: file.name, type: file.type, lastModified: file.lastModified })
+      .catch(err => { keepFailed(err); toast('This browser is out of storage, so the video won’t reopen after a refresh.'); });
+  }
   $('#addTimes').disabled = false;
   clearOutputs(); $('#exportErr').hidden = true;
   renderClips(); setHint();
   loadEngine().catch(() => {}); // warm up in the background; errors surface on export
 }
+function closeVideo(){
+  if(busy) return;
+  video.pause(); video.removeAttribute('src'); video.load();
+  if(state.url) URL.revokeObjectURL(state.url);
+  unmountInput();
+  Object.assign(state, { file:null, url:null, duration:0, clips:[], pendingIn:null, selId:null, stopAt:null, frames:[], zoom:0, fps:0 });
+  filmToken++;
+  drop.hidden = false; $('#vidError').hidden = true;
+  $('#fileBar').innerHTML = '<span>No video loaded</span>';
+  $('#tDur').textContent = fmt(0); $('#tlEmpty').hidden = false; $('#playhead').hidden = true;
+  $('#addTimes').disabled = true; $('#cropZone').hidden = true;
+  drawRuler(); renderFilm(); renderClips(); setHint(); showTab('video');
+  idb.del('kv', 'video').catch(() => {});
+}
+$('#fileBar').addEventListener('click', e => { if(e.target.closest('#closeVid')) closeVideo(); });
+
 video.addEventListener('loadedmetadata', () => {
   document.querySelector('.stage').style.setProperty('--va', `${video.videoWidth || 16}/${video.videoHeight || 9}`);
   requestAnimationFrame(layoutCrop);
@@ -1461,10 +1517,11 @@ async function addStill(cv, t, gid, fmtName){
   const tc = document.createElement('canvas');
   tc.width = Math.round(cv.width * k); tc.height = Math.round(cv.height * k);
   tc.getContext('2d').drawImage(cv, 0, 0, tc.width, tc.height);
-  const thumb = URL.createObjectURL(await canvasBlob(tc, 'image/jpeg', 0.82));
-  const s = { id: stillSeq++, gid, blob, url: URL.createObjectURL(blob), thumb, w: cv.width, h: cv.height, t, sel: false,
+  const thumbBlob = await canvasBlob(tc, 'image/jpeg', 0.82);
+  const s = { id: stillSeq++, gid, blob, url: URL.createObjectURL(blob), thumb: URL.createObjectURL(thumbBlob), w: cv.width, h: cv.height, t, sel: false,
     ext: png ? 'png' : 'jpg', base: safeName(state.file.name.replace(/\.[^.]+$/,'')) };
   stills.push(s);
+  if(persistOK){ askPersist(); idb.put('blobs', s.id, { blob, thumb: thumbBlob }).catch(keepFailed); }
   return s;
 }
 
@@ -1625,7 +1682,17 @@ $('#tabStills').addEventListener('click', () => showTab('stills'));
 
 const orderedStills = () => groups.slice().reverse().flatMap(g => stills.filter(s => s.gid === g.id));
 const ICON_DL = '<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>';
+const stillMeta = s => ({ id:s.id, gid:s.gid, w:s.w, h:s.h, t:s.t, sel:s.sel, ext:s.ext, base:s.base });
+let metaTimer = null;
+function saveStillsMeta(){
+  if(!persistOK || restoring) return;
+  clearTimeout(metaTimer);
+  metaTimer = setTimeout(() => {
+    idb.put('kv', 'stills', { list: stills.map(stillMeta), groups, stillSeq, groupSeq }).catch(keepFailed);
+  }, 250);
+}
 function renderGallery(){
+  saveStillsMeta();
   const n = stills.length, sel = stills.filter(s => s.sel).length;
   const badge = $('#stillCount'); badge.hidden = !n; badge.textContent = n;
   $('#gInfo').innerHTML = n ? `<b class="num">${n}</b> still${n === 1 ? '' : 's'}${sel ? ` · <b class="num">${sel}</b> selected` : ''}` : 'No stills yet';
@@ -1728,7 +1795,7 @@ function deleteStills(list){
 }
 function flushUndo(){
   if(!undoBuf) return;
-  for(const { s } of undoBuf){ URL.revokeObjectURL(s.url); URL.revokeObjectURL(s.thumb); }
+  for(const { s } of undoBuf){ URL.revokeObjectURL(s.url); URL.revokeObjectURL(s.thumb); idb.del('blobs', s.id).catch(() => {}); }
   undoBuf = null;
 }
 
@@ -1794,7 +1861,8 @@ function toast(msg, opt = {}){
   el.querySelector('button')?.addEventListener('click', () => { toastExpire = null; el.hidden = true; opt.onAction?.(); });
   toastTimer = setTimeout(() => { el.hidden = true; const f = toastExpire; toastExpire = null; f?.(); }, opt.ms || 3500);
 }
-addEventListener('beforeunload', e => { if(stills.length){ e.preventDefault(); e.returnValue = ''; } });
+// Only warn when stills couldn't be stored; otherwise they come back after a refresh.
+addEventListener('beforeunload', e => { if(stills.length && !persistOK){ e.preventDefault(); e.returnValue = ''; } });
 
 $('#cancelBtn').addEventListener('click', () => {
   if(stillsRunning){ cancelled = true; return; }
@@ -1888,6 +1956,33 @@ $('#exportBtn').addEventListener('click', async () => {
 });
 
 renderClips(); renderGallery();
+
+async function restoreSession(){
+  if(!persistOK) return;
+  try{
+    const saved = await idb.get('kv', 'stills');
+    if(saved?.list?.length){
+      for(const m of saved.list){
+        const b = await idb.get('blobs', m.id);
+        if(b) stills.push({ ...m, blob: b.blob, url: URL.createObjectURL(b.blob), thumb: URL.createObjectURL(b.thumb) });
+      }
+      groups.push(...(saved.groups || []));
+      stillSeq = Math.max(saved.stillSeq || 1, ...stills.map(s => s.id + 1));
+      groupSeq = saved.groupSeq || 1;
+      // clear out images left behind by a delete that was never finalised
+      const keep = new Set(stills.map(s => s.id));
+      for(const k of await idb.keys('blobs')) if(!keep.has(k)) idb.del('blobs', k).catch(() => {});
+    }
+    restoring = false; renderGallery();
+    const v = await idb.get('kv', 'video');
+    if(v?.blob && !state.file){
+      const file = v.blob instanceof File ? v.blob : new File([v.blob], v.name, { type: v.type, lastModified: v.lastModified });
+      await openFile(file, { restored: true });
+    }
+  }catch(err){ keepFailed(err); }
+  finally{ restoring = false; saveStillsMeta(); }
+}
+restoreSession();
 </script>
 </body>
 </html>

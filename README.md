@@ -11,6 +11,8 @@ A browser tool for cutting videos into clips.
    Name, adjust, reorder or delete clips in the list, or drag a clip's edges on the timeline to trim it. Zoom the timeline with + and − (or Ctrl/⌘ + scroll) for fine cuts.
 4. Tick the clips you want and export them as separate files or as one joined video.
 
+Your last video, your clip marks and your stills are kept in this browser's own storage, so they come back after a refresh. Close a video with the × next to its name if you don't want it reopened. Nothing is uploaded.
+
 Cutting runs in your browser with [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm), so videos are never uploaded. The first visit downloads the engine (about 31 MB) from jsDelivr, and the browser caches it after that.
 
 **Stills**
@@ -22,7 +24,7 @@ Grab full-resolution images from your video and browse them in the **Stills** ta
 - **Hide timeline** (or **T**) gives the video or the gallery the full height.
 - To grab many at once, tick clips, choose **Stills** under Export as, and pick either a set number per clip or a number per second (up to every frame). Choose PNG (lossless, the default) or JPEG (97% quality, smaller). **Pick the sharpest nearby frame** (on by default) checks up to 3 frames either side of each moment and keeps the least blurry one.
 - In the gallery, click a still to view it full size (←/→ to flip through, X to select, D to download, Z or click to toggle 100% zoom). Select stills individually, with Shift-click for a range, or a whole group at once, then download one, the selection, or everything. More than one comes as a ZIP.
-- Stills use the same aspect ratio and framing as video exports. They live in the page until you close or reload it, so download the ones you want to keep.
+- Stills use the same aspect ratio and framing as video exports.
 
 **Aspect ratio**
 
