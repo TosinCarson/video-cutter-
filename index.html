@@ -3,27 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Clip Cutter</title>
-<meta name="description" content="Cut a video into clips in your browser and export them. Nothing is uploaded.">
+<title>Stills</title>
+<meta name="description" content="Grab full-resolution stills and cut clips from your videos, right in the browser. Nothing is uploaded.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* Layout: an editor shell. Clips on the left, preview in the centre,
-   export settings on the right, a full-width timeline along the bottom.
+/* Layout: an editor shell. Clips and auto stills on the left, preview or
+   the stills gallery in the centre, a full-width timeline along the bottom,
+   and export settings on the right only while exporting.
    One dark theme on purpose, like the editors it is modelled on. */
 :root{
   color-scheme:dark;
-  --bg:#0E0F11;        /* app frame */
-  --panel:#16171A;     /* side panels, timeline */
-  --panel-2:#1C1E22;   /* cards, inputs */
-  --raised:#25282D;    /* hover, selected */
-  --line:#2A2D33;
-  --text:#E9EBEE; --muted:#9BA1A9; --faint:#636871;
-  --accent:#2E9BFF; --accent-hi:#5AB1FF; --accent-ink:#FFFFFF; --accent-soft:rgba(46,155,255,.16);
-  --clip:#A6DCEB; --clip-ink:#0C2630; --clip-off:#3A4A50;
-  --mark:#FFB020;
-  --danger:#FF6B5E;
+  /* Monochrome: neutral greys, white for primary actions and selection. */
+  --bg:#0D0D0D;        /* app frame */
+  --panel:#151515;     /* side panels, timeline */
+  --panel-2:#1C1C1C;   /* cards, inputs */
+  --raised:#262626;    /* hover, selected */
+  --line:#2B2B2B;
+  --text:#EDEDED; --muted:#A0A0A0; --faint:#686868;
+  --accent:#F2F2F2; --accent-hi:#FFFFFF; --accent-ink:#0D0D0D; --accent-soft:rgba(255,255,255,.08);
+  --clip:#D9D9D9; --clip-ink:#111111; --clip-off:#3A3A3A;
+  --mark:#E6E6E6;
+  --danger:#E0695C;    /* only for errors and delete */
   --stage:#000000;
   --ui:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -62,7 +64,7 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .ib.sm{width:26px;height:26px}
 .ib.sm svg.i{width:14px;height:14px}
 .ib.play{width:40px;height:40px;border-radius:50%;background:var(--text);color:var(--bg)}
-.ib.play:hover{background:#fff;color:var(--bg)}
+.ib.play:hover{background:var(--accent-hi);color:var(--bg)}
 .ib.play svg.i{fill:currentColor;stroke:none;width:16px;height:16px}
 .ib.danger:hover:not(:disabled){color:var(--danger)}
 
@@ -78,7 +80,7 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 /* top bar */
 .top{grid-area:top;display:flex;align-items:center;gap:14px;padding:0 14px}
 .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:14px;letter-spacing:-.01em}
-.logo{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:#fff}
+.logo{width:28px;height:28px;border-radius:7px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink)}
 .logo svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .file{flex:1;min-width:0;display:flex;justify-content:center;align-items:center;gap:10px;color:var(--muted)}
 .file .ib.sm{margin-left:-4px}
@@ -86,12 +88,14 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .top-r{display:flex;align-items:center;gap:10px}
 .pill{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 10px;border-radius:13px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px;color:var(--muted);white-space:nowrap}
 .pill i{width:7px;height:7px;border-radius:50%;background:var(--faint)}
-.pill.ok i{background:#3DD68C}
+.pill.ok i{background:var(--text)}
 .pill.busy i{background:var(--mark)}
 .pill.bad i{background:var(--danger)}
 
 /* left: clips */
-.left{grid-area:left;display:flex;flex-direction:column}
+.left{grid-area:left;display:flex;flex-direction:column;overflow-y:auto}
+.left .clips{flex:1 0 auto;overflow:visible;min-height:90px}
+.left .auto{margin-top:auto}
 .ph{display:flex;align-items:center;gap:8px;padding:14px 16px 10px}
 .ph h2{font-size:15px;font-weight:700;letter-spacing:-.01em}
 .ph .count{margin-left:auto;font-size:11.5px;color:var(--faint)}
@@ -152,7 +156,7 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .drop{position:absolute;inset:0;display:grid;place-items:center;align-content:center;gap:14px;padding:24px;text-align:center;cursor:pointer;
   border:1.5px dashed var(--line);border-radius:var(--r);background:var(--panel);transition:border-color .15s,background .15s}
 .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
-.drop .big{width:56px;height:56px;border-radius:14px;background:var(--accent);display:grid;place-items:center;color:#fff}
+.drop .big{width:56px;height:56px;border-radius:14px;background:var(--accent);display:grid;place-items:center;color:var(--accent-ink)}
 .drop .big svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .drop h1{font-size:20px;font-weight:700;letter-spacing:-.02em;text-wrap:balance}
 .drop p{color:var(--muted);max-width:44ch}
@@ -180,15 +184,15 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
   font-weight:600;font-size:12.5px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
 .ctab:hover{color:var(--text);background:var(--panel-2)}
 .ctab[aria-selected="true"]{background:var(--raised);color:var(--text);border-color:var(--line)}
-.badge{min-width:20px;height:18px;padding:0 6px;border-radius:9px;background:var(--accent);color:#fff;font:600 10.5px var(--mono);display:inline-grid;place-items:center}
+.badge{min-width:20px;height:18px;padding:0 6px;border-radius:9px;background:var(--accent);color:var(--accent-ink);font:600 10.5px var(--mono);display:inline-grid;place-items:center}
 .view{flex:1;min-height:0;display:flex;flex-direction:column}
 .stage.flash::after{content:"";position:absolute;inset:0;background:#fff;pointer-events:none;animation:flash .35s ease-out forwards}
 @keyframes flash{from{opacity:.45}to{opacity:0}}
 
 /* stills gallery */
 .gbar{display:flex;align-items:center;gap:8px;padding:10px 14px;flex-wrap:wrap}
-.btn.magic{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
-.btn.magic:hover:not(:disabled){background:var(--accent);color:#fff}
+.btn.magic{background:var(--panel-2);border-color:var(--line);color:var(--text)}
+.btn.magic:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.magic svg.i{fill:currentColor;stroke:none}
 .auto{margin:0 12px 12px;padding:12px;border-radius:var(--r);background:var(--panel-2);border:1px solid var(--line);display:grid;gap:10px;flex:none}
 .auto-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
@@ -219,7 +223,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .ghd b{font-size:13.5px;font-weight:700}
 .ghd span{font-size:11.5px;color:var(--faint)}
 .ghd .acts{margin-left:auto;display:flex;gap:14px}
-.lnk{background:none;border:0;color:var(--accent-hi);font-weight:600;font-size:12px;cursor:pointer;padding:0}
+.lnk{background:none;border:0;color:var(--text);font-weight:600;font-size:12px;cursor:pointer;padding:0}
 .lnk:hover{text-decoration:underline}
 .ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(var(--tile,190px),calc(50% - 5px)),1fr));gap:10px}
 .tile{position:relative;border-radius:var(--r);background:var(--panel);border:1px solid var(--line);overflow:hidden;transition:border-color .15s,box-shadow .15s}
@@ -253,12 +257,12 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .lb-nav:disabled{opacity:.25;cursor:default}
 .lb-nav.prev{left:12px}
 .lb-nav.next{right:12px}
-.btn.picked{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.picked{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 
 /* toast */
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;background:var(--raised);border:1px solid var(--line);border-radius:8px;
   padding:9px 12px 9px 14px;display:flex;gap:14px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.45);font-size:12.5px;max-width:calc(100vw - 32px)}
-.toast button{background:none;border:0;color:var(--accent-hi);font-weight:700;cursor:pointer;font-size:12.5px}
+.toast button{background:none;border:0;color:var(--text);text-decoration:underline;font-weight:700;cursor:pointer;font-size:12.5px}
 
 /* right: export */
 .right{grid-area:right;display:flex;flex-direction:column;overflow:auto}
@@ -296,8 +300,10 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .outs li{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--r);background:var(--panel-2);border:1px solid var(--line);font-size:12px}
 .outs .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .outs .s{color:var(--faint);font-size:11px}
-.outs a{color:var(--accent-hi);font-weight:600;text-decoration:none}
+.outs a{color:var(--text);font-weight:600;text-decoration:underline}
 .outs a:hover{text-decoration:underline}
+.help{position:fixed;top:58px;right:14px;z-index:40;width:300px;max-width:calc(100vw - 32px);background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:14px;display:grid;gap:10px;box-shadow:0 14px 40px rgba(0,0,0,.5)}
 .keys{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:11.5px;color:var(--muted);align-items:center}
 .keys span:nth-child(odd){display:flex;gap:3px}
 
@@ -358,7 +364,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 .blk .h.s{left:0}
 .blk .h.e{right:0}
 .pend{position:absolute;top:4px;bottom:4px;border-radius:6px;border:1.5px dashed var(--mark);
-  background:repeating-linear-gradient(135deg,rgba(255,176,32,.18) 0 6px,transparent 6px 12px);pointer-events:none}
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.12) 0 6px,transparent 6px 12px);pointer-events:none}
 .playhead{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--text);pointer-events:none;z-index:3}
 .playhead::before{content:"";position:absolute;top:0;left:-5px;width:12px;height:12px;border-radius:2px 2px 6px 6px;background:var(--text)}
 .tl-empty{position:absolute;inset:24px 0 0;display:grid;place-items:center;color:var(--faint);font-size:12.5px;pointer-events:none}
@@ -381,7 +387,6 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
   .gscroll{overflow:visible}
   .lb-body img{top:10px;left:10px;width:calc(100% - 20px);height:calc(100% - 80px)}
   .lb-nav{top:auto;bottom:14px;transform:none}
-  .keys-sec{display:none}
 }
 @media (max-width:520px){
   .tc{font-size:16px}
@@ -394,12 +399,12 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 <body>
 <input type="file" id="fileInput" accept="video/*,.mov,.mp4,.m4v,.webm,.mkv" hidden>
 
-<div class="app">
+<div class="app right-off">
   <!-- top bar -->
   <header class="top">
     <div class="brand">
-      <span class="logo"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></span>
-      Clip Cutter
+      <span class="logo"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="14" rx="2"/><path d="M7 3h12a2 2 0 0 1 2 2v12"/></svg></span>
+      Stills
     </div>
     <button class="ib ptgl" id="leftToggle" aria-pressed="true" title="Show or hide the Clips panel ([)" aria-label="Show or hide the Clips panel"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M4.5 7h3M4.5 10h3" /></svg></button>
     <div class="file" id="fileBar"><span>No video loaded</span></div>
@@ -407,8 +412,8 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       <span class="pill" id="engine" title="The video engine runs in your browser. Videos are never uploaded."><i></i><span id="engineText">Runs in your browser</span></span>
       <button class="btn ghost" id="openBtn">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Open video</button>
-      <button class="ib ptgl" id="rightToggle" aria-pressed="true" title="Show or hide the Export panel (])" aria-label="Show or hide the Export panel"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/><path d="M16.5 7h3M16.5 10h3"/></svg></button>
-      <button class="btn" id="exportTop" disabled>
+      <button class="ib" id="helpBtn" aria-expanded="false" aria-controls="helpCard" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/></svg></button>
+      <button class="btn" id="exportTop" aria-pressed="false" title="Export settings (])">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Export</button>
     </div>
   </header>
@@ -426,7 +431,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     </div>
     <ul class="clips" id="clips"></ul>
     <div class="auto" id="autoCard">
-      <span class="label">Auto stills</span>
+      <span class="label">Stills</span>
       <div class="auto-row">
         <label for="bmN">How many</label>
         <input type="number" id="bmN" min="1" max="20" value="5">
@@ -435,11 +440,17 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
           <label><input type="radio" name="bmFrom" value="clips" id="bmClips"><span id="bmClipsTxt">Ticked clips</span></label>
         </div>
       </div>
+      <div class="seg" role="radiogroup" aria-label="Image format" title="Applies to every still: Grab frame, timeline drags, Auto stills and Stills export">
+        <label><input type="radio" name="sfmt" value="png" id="sfPng" checked><span>PNG · best</span></label>
+        <label><input type="radio" name="sfmt" value="jpg" id="sfJpg"><span>JPEG · smaller</span></label>
+      </div>
+      <label class="chk" title="Checks up to 3 frames either side of each moment and keeps the least blurry"><input type="checkbox" id="sharpest" checked> Pick the sharpest nearby frame</label>
+      <span class="sub" id="sqDesc" hidden></span>
       <div class="auto-btns">
         <button class="btn magic" id="bmGo" disabled title="Score frames and keep the best few"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Best moments</button>
         <button class="btn ghost" id="rndGo" disabled title="Grab random frames; selected ones are kept when you shuffle"><svg class="i" viewBox="0 0 24 24" style="fill:none"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg><span id="rndTxt">Random</span></button>
       </div>
-      <span class="sub" id="bmDesc">Best moments scores frames for sharpness, steadiness, exposure and colour. Random grabs any frames; select the ones you like and shuffle again to swap the rest.</span>
+      <span class="sub" id="bmDesc">Random: select the ones you like, then shuffle again to swap the rest.</span>
       <div class="bm-prog" id="bmProg" hidden>
         <div class="bar"><i id="bmBar"></i></div>
         <div class="pstatus"><span id="bmText">Starting…</span><button class="btn ghost" id="bmCancel">Stop</button></div>
@@ -530,7 +541,8 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
   <!-- right: export -->
   <aside class="right">
     <div class="sec">
-      <div class="ph" style="padding:0"><h2>Export</h2></div>
+      <div class="ph" style="padding:0"><h2>Export</h2>
+        <button class="ib sm" id="exportClose" title="Close (])" aria-label="Close export settings" style="margin-left:auto"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
       <div class="summary">
         <div><b class="num" id="sumN">0</b><span>clips ticked</span></div>
         <div><b class="num" id="sumT">0:00</b><span>total length</span></div>
@@ -573,15 +585,6 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       <label class="chk" id="everyRow" hidden><input type="checkbox" id="everyFrame"> Every frame</label>
       <span class="sub" id="stillsEst"></span>
     </div>
-    <div class="sec">
-      <span class="label">Still image quality</span>
-      <div class="seg" role="radiogroup" aria-label="Image format">
-        <label><input type="radio" name="sfmt" value="png" id="sfPng" checked><span>PNG · best</span></label>
-        <label><input type="radio" name="sfmt" value="jpg" id="sfJpg"><span>JPEG · smaller</span></label>
-      </div>
-      <label class="chk"><input type="checkbox" id="sharpest" checked> Pick the sharpest nearby frame</label>
-      <span class="sub" id="sqDesc"></span>
-    </div>
     <div class="sec" id="qualitySec">
       <label class="label" for="quality">Quality</label>
       <select class="qsel" id="quality">
@@ -601,23 +604,6 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       </div>
       <div class="err" id="exportErr" hidden></div>
       <ul class="outs" id="outs"></ul>
-    </div>
-    <div class="sec keys-sec">
-      <span class="label">Shortcuts</span>
-      <div class="keys">
-        <span><kbd>Space</kbd></span><span>Play / pause</span>
-        <span><kbd>I</kbd><kbd>O</kbd></span><span>Mark start / end</span>
-        <span><kbd>←</kbd><kbd>→</kbd></span><span>1 second (Shift: 5)</span>
-        <span><kbd>,</kbd><kbd>.</kbd></span><span>One frame</span>
-        <span><kbd>+</kbd><kbd>−</kbd></span><span>Zoom timeline</span>
-        <span><kbd>Esc</kbd></span><span>Clear a marked start</span>
-        <span><kbd>S</kbd></span><span>Grab this frame to Stills</span>
-        <span><kbd>←</kbd><kbd>→</kbd></span><span>Next / previous still (viewer)</span>
-        <span><kbd>X</kbd></span><span>Select still (viewer)</span>
-        <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
-        <span><kbd>T</kbd></span><span>Show / hide timeline</span>
-        <span><kbd>[</kbd><kbd>]</kbd></span><span>Show / hide side panels</span>
-      </div>
     </div>
   </aside>
 
@@ -666,6 +652,26 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="help" id="helpCard" role="dialog" aria-label="Keyboard shortcuts" hidden>
+  <span class="label">Keyboard shortcuts</span>
+  <div class="keys">
+        <span><kbd>Space</kbd></span><span>Play / pause</span>
+        <span><kbd>I</kbd><kbd>O</kbd></span><span>Mark start / end</span>
+        <span><kbd>←</kbd><kbd>→</kbd></span><span>1 second (Shift: 5)</span>
+        <span><kbd>,</kbd><kbd>.</kbd></span><span>One frame</span>
+        <span><kbd>+</kbd><kbd>−</kbd></span><span>Zoom timeline</span>
+        <span><kbd>Esc</kbd></span><span>Clear a marked start</span>
+        <span><kbd>S</kbd></span><span>Grab this frame to Stills</span>
+        <span><kbd>←</kbd><kbd>→</kbd></span><span>Next / previous still (viewer)</span>
+        <span><kbd>X</kbd></span><span>Select still (viewer)</span>
+        <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
+        <span><kbd>T</kbd></span><span>Show / hide timeline</span>
+        <span><kbd>[</kbd></span><span>Show / hide the Clips panel</span>
+        <span><kbd>]</kbd></span><span>Open / close Export</span>
+        <span><kbd>?</kbd></span><span>This list</span>
+      </div>
+    </div>
+</div>
 <div class="peek" id="peek" hidden><img id="peekImg" alt=""><span id="peekT"></span></div>
 
 <script type="module">
@@ -1085,7 +1091,9 @@ document.addEventListener('keydown', e => {
   if(e.target.closest('input,select,textarea')) return;
   if(k === 't' || k === 'T'){ setTimeline(document.querySelector('.app').classList.contains('tl-off')); return; }
   if(k === '['){ setPanel('left', !panelOn('left')); return; }
-  if(k === ']'){ setPanel('right', !panelOn('right')); return; }
+  if(k === ']'){ setExportPanel(!panelOn('right')); return; }
+  if(k === '?'){ toggleHelp(); return; }
+  if(k === 'Escape' && !$('#helpCard').hidden){ toggleHelp(false); return; }
   if(!$('#stillsView').hidden){
     if(k === 'a' || k === 'A'){ e.preventDefault(); toggleSelectAll(); }
     else if(k === 'Delete'){ deleteStills(stills.filter(s => s.sel)); }
@@ -1161,7 +1169,7 @@ function renderClips(){
     : stills ? `Grab ${stills.approx ? 'about ' : ''}${stills.total} still${stills.total === 1 ? '' : 's'}`
     : `Export ${on.length} clip${on.length > 1 ? 's' : ''}`;
   if(stills) showStillsEst(stills);
-  for(const b of [$('#exportBtn'), $('#exportTop')]) b.disabled = busy || !on.length || !!stills?.tooMany;
+  $('#exportBtn').disabled = busy || !on.length || !!stills?.tooMany;
   $('#grabBtn').disabled = !state.duration;
   syncBm();
   $('#exportBtn').textContent = label;
@@ -1907,21 +1915,35 @@ $('#rndGo').addEventListener('click', randomStills);
 /* ── hide / show side panels ── */
 function setPanel(side, on){
   document.querySelector('.app').classList.toggle(side + '-off', !on);
-  $(`#${side}Toggle`).setAttribute('aria-pressed', on);
+  $(`#${side}Toggle`)?.setAttribute('aria-pressed', on);
   try{ localStorage.setItem('clipcutter-' + side, on ? '1' : '0'); }catch(e){}
   requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); });
 }
 const panelOn = side => !document.querySelector('.app').classList.contains(side + '-off');
 $('#leftToggle').addEventListener('click', () => setPanel('left', !panelOn('left')));
-$('#rightToggle').addEventListener('click', () => setPanel('right', !panelOn('right')));
-for(const side of ['left','right']){ try{ if(localStorage.getItem('clipcutter-' + side) === '0') setPanel(side, false); }catch(e){} }
+try{ if(localStorage.getItem('clipcutter-left') === '0') setPanel('left', false); }catch(e){}
+/* Export settings live in the right panel, shown only while you're exporting. */
+function setExportPanel(on){
+  setPanel('right', on);
+  $('#exportTop').setAttribute('aria-pressed', on);
+  if(on && matchMedia('(max-width:980px)').matches) document.querySelector('.right').scrollIntoView({ behavior:'smooth' });
+}
+$('#exportClose').addEventListener('click', () => setExportPanel(false));
+/* Keyboard shortcuts card */
+function toggleHelp(force){
+  const on = force ?? $('#helpCard').hidden;
+  $('#helpCard').hidden = !on; $('#helpBtn').setAttribute('aria-expanded', on);
+}
+$('#helpBtn').addEventListener('click', e => { e.stopPropagation(); toggleHelp(); });
+document.addEventListener('click', e => { if(!$('#helpCard').hidden && !e.target.closest('#helpCard')) toggleHelp(false); });
 
 /* ── gallery ── */
 function showTab(which){
   const vid = which === 'video';
   $('#videoView').hidden = !vid; $('#stillsView').hidden = vid;
   $('#tabVideo').setAttribute('aria-selected', vid); $('#tabStills').setAttribute('aria-selected', !vid);
-  if(!vid) video.pause(); else requestAnimationFrame(layoutCrop);
+  if(!vid) video.pause();
+  else { requestAnimationFrame(layoutCrop); if(state.duration) video.currentTime = video.currentTime; } // repaint the frame
   document.querySelector('.app').classList.toggle('stills-tab', !vid);
   $('#tlAdd').hidden = vid || !state.duration;
   $('#tlHint').textContent = vid
@@ -2135,7 +2157,7 @@ $('#cancelBtn').addEventListener('click', () => {
   ff.terminate(); ff = null; ffLoading = null; mounted = null;
   loadEngine().catch(() => {});
 });
-$('#exportTop').addEventListener('click', () => { if(!panelOn('right')) setPanel('right', true); $('#exportBtn').click(); });
+$('#exportTop').addEventListener('click', () => setExportPanel(!panelOn('right')));
 
 $('#exportBtn').addEventListener('click', async () => {
   const picked = state.clips.filter(c => c.on);
@@ -2206,6 +2228,7 @@ $('#exportBtn').addEventListener('click', async () => {
     }
     setProgress(cancelled ? 0 : 1, cancelled ? 'Export cancelled.' :
       (mode === 'join' ? 'Done. Your video is downloading.' : 'Done. If your browser blocked a download, use the links below.'));
+    if(!cancelled && !panelOn('right')) toast('Export finished', { action: 'Show files', onAction: () => setExportPanel(true) });
   }catch(err){
     if(!cancelled){
       console.error(err);

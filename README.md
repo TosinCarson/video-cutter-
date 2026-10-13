@@ -1,6 +1,6 @@
-# Clip Cutter
+# Stills
 
-A browser tool for cutting videos into clips.
+A browser tool for grabbing full-resolution stills from videos, and cutting them into clips.
 
 1. Open `index.html` from a web address (GitHub Pages, or a local server such as `python3 -m http.server`). Double-clicking the file won't work, because the video engine only loads over http(s).
 2. Drop in a video (MP4, MOV or WebM, up to about 150 MB).
@@ -21,10 +21,10 @@ Grab full-resolution images from your video and browse them in the **Stills** ta
 
 - Press **S** or **Grab frame** to add the frame you're on.
 - On the Stills tab, drag any point on the timeline up into the grid to add it as a still. Slide along the timeline first to fine-tune the moment; once you move up, it's locked. Double-clicking the timeline or **+ Add still at** also works.
-- **Auto stills** (bottom of the left panel): set how many and whether to look at the whole video or the ticked clips.
+- **Stills card** (bottom of the left panel): pick PNG or JPEG and whether to use the sharpest nearby frame; these apply to every still. Then set how many and whether to look at the whole video or the ticked clips.
   - **Random** grabs that many random moments, skipping black, blank, blurry or badly exposed frames. Select the ones you like and press **Shuffle again**: your selected ones stay and the rest are swapped for new moments.
   - **Best moments** picks the best few frames for you, from the whole video or just the ticked clips. It samples up to a few hundred frames, scores each for sharpness, steadiness, exposure, contrast and colour, keeps only the top-scoring ones, spreads them out in time and saves them full size in a "Best moments" group.
-- Hide or show the left and right panels with the buttons in the top bar, or **[** and **]**.
+- Hide or show the Clips panel with the button next to the name (or **[**). Export settings open from **Export** in the top bar (or **]**). The **?** button lists every keyboard shortcut.
 - **Hide timeline** (or **T**) gives the video or the gallery the full height.
 - To grab many at once, tick clips, choose **Stills** under Export as, and pick either a set number per clip or a number per second (up to every frame). Choose PNG (lossless, the default) or JPEG (97% quality, smaller). **Pick the sharpest nearby frame** (on by default) checks up to 3 frames either side of each moment and keeps the least blurry one.
 - In the gallery, click a still to view it full size (←/→ to flip through, X to select, D to download, Z or click to toggle 100% zoom). Select stills individually, with Shift-click for a range, or a whole group at once, then download one, the selection, or everything. More than one comes as a ZIP.
