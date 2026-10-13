@@ -21,6 +21,7 @@ Grab full-resolution images from your video and browse them in the **Stills** ta
 
 - Press **S** or **Grab frame** to add the frame you're on.
 - On the Stills tab, drag any point on the timeline up into the grid to add it as a still. Slide along the timeline first to fine-tune the moment; once you move up, it's locked. Double-clicking the timeline or **+ Add still at** also works.
+- **Find best moments** (Stills tab) picks the best few frames for you, from the whole video or just the ticked clips. It samples up to a few hundred frames, scores each for sharpness, steadiness, exposure, contrast and colour, keeps only the top-scoring ones, spreads them out in time and saves them full size in a "Best moments" group.
 - **Hide timeline** (or **T**) gives the video or the gallery the full height.
 - To grab many at once, tick clips, choose **Stills** under Export as, and pick either a set number per clip or a number per second (up to every frame). Choose PNG (lossless, the default) or JPEG (97% quality, smaller). **Pick the sharpest nearby frame** (on by default) checks up to 3 frames either side of each moment and keeps the least blurry one.
 - In the gallery, click a still to view it full size (←/→ to flip through, X to select, D to download, Z or click to toggle 100% zoom). Select stills individually, with Shift-click for a range, or a whole group at once, then download one, the selection, or everything. More than one comes as a ZIP.
