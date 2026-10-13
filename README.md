@@ -41,6 +41,10 @@ Give a set of images the same colour grade.
 - Save looks by name and reuse them later. Download one image, the selected ones, or all of them at full resolution (PNG or JPEG, from the Stills card setting). Originals are never changed.
 - Grading runs on the graphics card (WebGL), so sliders update live. Images and looks are kept across refreshes.
 
+**Remove captions**
+
+For burned-in captions (ones you can't turn off). In the Stills card, press **Set area** and drag a box around where the captions appear on the video, then **Done**; **Remove captions** turns on. Every still you grab from then on is cleaned: the page finds the caption letters (near-white and brighter than the area around the box), fills them from moments up to 4 seconds away when that spot is uncovered, and fills anything left from the surrounding pixels. It works best on a still camera with captions over plain areas; each cleaned still takes a few seconds. In the viewer, hold **Hold: before** (or **O**) to compare with the captioned frame.
+
 **Aspect ratio**
 
 Export as Original, 9:16, 4:5, 1:1 or 16:9. **Crop to fill** trims the picture; drag the frame on the preview to choose what stays in the shot. **Fit with bars** keeps the whole picture and adds black bars. Either one re-encodes the video.
