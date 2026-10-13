@@ -30,6 +30,17 @@ Grab full-resolution images from your video and browse them in the **Stills** ta
 - In the gallery, click a still to view it full size (←/→ to flip through, X to select, D to download, Z or click to toggle 100% zoom). Select stills individually, with Shift-click for a range, or a whole group at once, then download one, the selection, or everything. More than one comes as a ZIP.
 - Stills use the same aspect ratio and framing as video exports.
 
+**Grade**
+
+Give a set of images the same colour grade.
+
+- Add stills (select them in the Stills tab and press **Grade**) or upload your own photos with **Upload images**, or drop image files onto the page.
+- Start from a preset (Clean, Warm, Cool, Bright & airy, Moody, Film, Black & white) and adjust Light (exposure, contrast, highlights, shadows, whites, blacks), Colour (temperature, tint, vibrance, saturation), Split toning and Effects (fade, vignette, grain, sharpen). Double-click a slider's name to reset it.
+- The look applies to every image in the set, including ones you add later. Hold **Hold to compare** (or **\\**) to see the original.
+- **Even out exposure first** brings each image to a similar brightness before the look, which helps mixed lighting match.
+- Save looks by name and reuse them later. Download one image, the selected ones, or all of them at full resolution (PNG or JPEG, from the Stills card setting). Originals are never changed.
+- Grading runs on the graphics card (WebGL), so sliders update live. Images and looks are kept across refreshes.
+
 **Aspect ratio**
 
 Export as Original, 9:16, 4:5, 1:1 or 16:9. **Crop to fill** trims the picture; drag the frame on the preview to choose what stays in the shot. **Fit with bars** keeps the whole picture and adds black bars. Either one re-encodes the video.
