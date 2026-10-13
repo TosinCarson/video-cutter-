@@ -190,6 +190,15 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .btn.magic{background:var(--accent-soft);border-color:var(--accent);color:var(--text)}
 .btn.magic:hover:not(:disabled){background:var(--accent);color:#fff}
 .btn.magic svg.i{fill:currentColor;stroke:none}
+.auto{margin:0 12px 12px;padding:12px;border-radius:var(--r);background:var(--panel-2);border:1px solid var(--line);display:grid;gap:10px;flex:none}
+.auto-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.auto-row input[type=number]{width:52px;background:var(--bg);border:1px solid var(--line);border-radius:var(--r);height:30px;padding:0 6px;font:500 13px var(--mono)}
+.auto-row input[type=number]:focus{border-color:var(--accent);outline:none}
+.auto{min-width:0}
+.auto-row .seg{flex-basis:100%}
+.auto-btns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.auto-btns .btn{padding:0 8px;min-width:0}
+.auto .sub{font-size:11.5px}
 .bm{margin:0 14px 10px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);display:grid;gap:10px}
 .bm-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
 .bm-row input[type=number]{width:64px;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);height:32px;padding:0 8px;font:500 14px var(--mono)}
@@ -295,6 +304,13 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 /* timeline */
 .tl{grid-area:tl;display:flex;flex-direction:column}
 .app.tl-off{grid-template-rows:52px minmax(0,1fr)}
+/* hide / show side panels */
+.app.left-off{grid-template-columns:minmax(0,1fr) 290px;grid-template-areas:"top top" "center right" "tl tl"}
+.app.right-off{grid-template-columns:300px minmax(0,1fr);grid-template-areas:"top top" "left center" "tl tl"}
+.app.left-off.right-off{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "center" "tl"}
+.app.left-off .left,.app.right-off .right{display:none}
+.ptgl[aria-pressed="false"]{color:var(--faint)}
+.ptgl[aria-pressed="true"]{color:var(--text)}
 .app.tl-off .tl{display:none}
 .ctabs .spacer{flex:1}
 .ctab.tgl[aria-pressed="false"]{color:var(--faint)}
@@ -349,6 +365,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 
 /* ── narrow screens: stack everything, page scrolls ── */
 @media (max-width:980px){
+  .app.left-off,.app.right-off,.app.left-off.right-off{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "center" "tl" "left" "right"}
   body{overflow:auto}
   .app{height:auto;min-height:100%;grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
     grid-template-areas:"top" "center" "tl" "left" "right"}
@@ -384,11 +401,13 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       <span class="logo"><svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg></span>
       Clip Cutter
     </div>
+    <button class="ib ptgl" id="leftToggle" aria-pressed="true" title="Show or hide the Clips panel ([)" aria-label="Show or hide the Clips panel"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/><path d="M4.5 7h3M4.5 10h3" /></svg></button>
     <div class="file" id="fileBar"><span>No video loaded</span></div>
     <div class="top-r">
       <span class="pill" id="engine" title="The video engine runs in your browser. Videos are never uploaded."><i></i><span id="engineText">Runs in your browser</span></span>
       <button class="btn ghost" id="openBtn">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Open video</button>
+      <button class="ib ptgl" id="rightToggle" aria-pressed="true" title="Show or hide the Export panel (])" aria-label="Show or hide the Export panel"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/><path d="M16.5 7h3M16.5 10h3"/></svg></button>
       <button class="btn" id="exportTop" disabled>
         <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Export</button>
     </div>
@@ -406,6 +425,26 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       </div>
     </div>
     <ul class="clips" id="clips"></ul>
+    <div class="auto" id="autoCard">
+      <span class="label">Auto stills</span>
+      <div class="auto-row">
+        <label for="bmN">How many</label>
+        <input type="number" id="bmN" min="1" max="20" value="5">
+        <div class="seg" role="radiogroup" aria-label="Where to look">
+          <label><input type="radio" name="bmFrom" value="all" id="bmAll" checked><span>Whole video</span></label>
+          <label><input type="radio" name="bmFrom" value="clips" id="bmClips"><span id="bmClipsTxt">Ticked clips</span></label>
+        </div>
+      </div>
+      <div class="auto-btns">
+        <button class="btn magic" id="bmGo" disabled title="Score frames and keep the best few"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Best moments</button>
+        <button class="btn ghost" id="rndGo" disabled title="Grab random frames; selected ones are kept when you shuffle"><svg class="i" viewBox="0 0 24 24" style="fill:none"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg><span id="rndTxt">Random</span></button>
+      </div>
+      <span class="sub" id="bmDesc">Best moments scores frames for sharpness, steadiness, exposure and colour. Random grabs any frames; select the ones you like and shuffle again to swap the rest.</span>
+      <div class="bm-prog" id="bmProg" hidden>
+        <div class="bar"><i id="bmBar"></i></div>
+        <div class="pstatus"><span id="bmText">Starting…</span><button class="btn ghost" id="bmCancel">Stop</button></div>
+      </div>
+    </div>
   </aside>
 
   <!-- centre: preview -->
@@ -463,8 +502,6 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     <div class="view" id="stillsView" role="tabpanel" aria-labelledby="tabStills" hidden>
       <div class="gbar">
         <span class="ginfo" id="gInfo">No stills yet</span>
-        <button class="btn magic" id="bmOpen" disabled title="Let the page pick the best frames for you">
-          <svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Find best moments</button>
         <div class="gsize" role="group" aria-label="Thumbnail size">
           <button data-size="130" aria-pressed="false" title="Small thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></svg></button>
           <button data-size="190" aria-pressed="true" title="Medium thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="1" width="6.5" height="6.5" rx="1"/><rect x="1" y="8.5" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="8.5" width="6.5" height="6.5" rx="1"/></svg></button>
@@ -476,29 +513,12 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <button class="btn" id="gDlSel" disabled>
           <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg><span id="gDlSelTxt">Download selected</span></button>
       </div>
-      <div class="bm" id="bmPanel" hidden>
-        <div class="bm-row">
-          <label for="bmN">Pick the</label>
-          <input type="number" id="bmN" min="1" max="20" value="5">
-          <span>best moments from</span>
-          <div class="seg" role="radiogroup" aria-label="Where to look">
-            <label><input type="radio" name="bmFrom" value="all" id="bmAll" checked><span>Whole video</span></label>
-            <label><input type="radio" name="bmFrom" value="clips" id="bmClips"><span id="bmClipsTxt">Ticked clips</span></label>
-          </div>
-          <button class="btn" id="bmGo">Find them</button>
-        </div>
-        <span class="sub" id="bmDesc">Checks up to a few hundred frames for sharpness, steady moments, good exposure and colour, skips near-duplicates and spreads the picks out. They land in a “Best moments” group for you to keep or delete.</span>
-        <div class="bm-prog" id="bmProg" hidden>
-          <div class="bar"><i id="bmBar"></i></div>
-          <div class="pstatus"><span id="bmText">Starting…</span><button class="btn ghost" id="bmCancel">Stop</button></div>
-        </div>
-      </div>
       <div class="gscroll" id="gScroll">
         <div class="gempty" id="gEmpty">
           <span class="big"><svg class="i" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
           <h3>Grab stills from your video</h3>
           <p>Press <kbd>S</kbd> or <b>Grab frame</b> on the Video tab to add the frame you’re on. To grab many at once, tick clips and choose <b>Stills</b> under Export as. Every still is full resolution.</p>
-          <button class="btn magic" id="bmOpen2" disabled>
+          <button class="btn magic" id="bmOpen2" disabled title="Uses the Auto stills settings in the left panel">
             <svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Or let the page find the best moments</button>
         </div>
         <div id="gGroups"></div>
@@ -596,6 +616,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <span><kbd>X</kbd></span><span>Select still (viewer)</span>
         <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
         <span><kbd>T</kbd></span><span>Show / hide timeline</span>
+        <span><kbd>[</kbd><kbd>]</kbd></span><span>Show / hide side panels</span>
       </div>
     </div>
   </aside>
@@ -1063,6 +1084,8 @@ document.addEventListener('keydown', e => {
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target.closest('input,select,textarea')) return;
   if(k === 't' || k === 'T'){ setTimeline(document.querySelector('.app').classList.contains('tl-off')); return; }
+  if(k === '['){ setPanel('left', !panelOn('left')); return; }
+  if(k === ']'){ setPanel('right', !panelOn('right')); return; }
   if(!$('#stillsView').hidden){
     if(k === 'a' || k === 'A'){ e.preventDefault(); toggleSelectAll(); }
     else if(k === 'Delete'){ deleteStills(stills.filter(s => s.sel)); }
@@ -1731,6 +1754,7 @@ async function findBestMoments(){
   const step = total / samples;
   busy = stillsRunning = true; cancelled = false; renderClips();
   $('#bmProg').hidden = false; $('#bmCancel').hidden = false; $('#bmGo').disabled = true; bmProgress(0, 'Getting ready…');
+  showTab('stills');
   try{
     const v = await captureVideo();
     const frames = [];
@@ -1797,17 +1821,100 @@ async function findBestMoments(){
   }
 }
 function syncBm(){
-  $('#bmOpen').disabled = $('#bmOpen2').disabled = !state.duration;
+  const none = !state.duration;
+  $('#bmGo').disabled = $('#rndGo').disabled = $('#bmOpen2').disabled = none || busy;
   const ticked = state.clips.filter(c => c.on).length;
   $('#bmClips').disabled = !ticked;
   $('#bmClipsTxt').textContent = ticked ? `Ticked clips (${ticked})` : 'Ticked clips';
   if(!ticked && $('#bmClips').checked) $('#bmAll').checked = true;
+  try{ $('#rndTxt').textContent = stills.some(s => s.gid === RANDOM_GROUP) ? 'Shuffle again' : 'Random'; }catch(e){ /* gallery not set up yet */ }
 }
-const openBm = () => { showTab('stills'); $('#bmPanel').hidden = false; $('#bmN').focus(); };
-$('#bmOpen').addEventListener('click', () => { $('#bmPanel').hidden ? openBm() : ($('#bmPanel').hidden = true); });
-$('#bmOpen2').addEventListener('click', openBm);
+$('#bmOpen2').addEventListener('click', () => { setPanel('left', true); findBestMoments(); });
 $('#bmGo').addEventListener('click', findBestMoments);
 $('#bmCancel').addEventListener('click', () => { cancelled = true; });
+
+/* ── random stills ──
+   One "Random picks" group. Shuffling again swaps out every still in it you
+   haven't selected, so you can keep the good ones and reroll the rest. */
+const RANDOM_GROUP = 'random';
+let randomSeen = []; // moments shown in recent shuffles, so the next one shows something new
+async function randomStills(){
+  if(busy || !state.duration) return;
+  const n = clamp(Math.round(Number($('#bmN').value) || 5), 1, 20);
+  const fromClips = $('#bmClips').checked;
+  const ranges = fromClips ? state.clips.filter(c => c.on).map(c => ({ start:c.start, end:c.end }))
+                           : [{ start:0, end:state.duration }];
+  if(!ranges.length) return;
+  const total = ranges.reduce((s,r) => s + r.end - r.start, 0);
+  busy = stillsRunning = true; cancelled = false; renderClips();
+  $('#bmProg').hidden = false; $('#bmCancel').hidden = false; bmProgress(0, 'Picking random moments…');
+  showTab('stills');
+  let made = 0;
+  try{
+    const v = await captureVideo(), o = stillOpts();
+    let g = groups.find(g => g.id === RANDOM_GROUP);
+    if(g){
+      const swap = stills.filter(s => s.gid === RANDOM_GROUP && !s.sel);
+      for(const s of swap){
+        stills.splice(stills.indexOf(s), 1);
+        URL.revokeObjectURL(s.url); URL.revokeObjectURL(s.thumb); idb.del('blobs', s.id).catch(() => {});
+      }
+      groups.splice(groups.indexOf(g), 1);
+    } else g = { id: RANDOM_GROUP, title: 'Random picks' };
+    groups.push(g); // newest group shows first
+    const kept = stills.filter(s => s.gid === RANDOM_GROUP);
+    g.sub = `${fromClips ? 'From ticked clips' : 'From the whole video'} · select the ones you like, then Shuffle again`;
+    renderGallery();
+    // Learn what a normal frame looks like in this video from a quick sample,
+    // so random picks can skip ones that are far blurrier, darker or brighter.
+    const ref = [];
+    for(let k = 0; k < 12 && !cancelled; k++){
+      const r = ranges[k % ranges.length];
+      v.currentTime = r.start + (r.end - r.start) * ((Math.floor(k / ranges.length) + 0.5) / Math.ceil(12 / ranges.length));
+      await once(v, 'seeked', 10000);
+      ref.push(analyzeFrame(v));
+    }
+    const median = a => { const b = [...a].sort((x,y) => x - y); return b[Math.floor(b.length / 2)] || 0; };
+    const medSharp = median(ref.map(f => f.sharp)), medMean = median(ref.map(f => f.mean));
+    const okFrame = a => a.mean > 25 && a.mean < 235 && a.std > 12 && a.sharp >= medSharp * 0.3 && Math.abs(a.mean - medMean) <= 60;
+    const minGap = Math.min(2, total / (n * 3));
+    const at = () => { let x = Math.random() * total; for(const r of ranges){ const d = r.end - r.start; if(x < d) return { t: r.start + x, r }; x -= d; } return { t: ranges[0].start, r: ranges[0] }; };
+    for(let tries = 0; made < n && tries < n * 20 && !cancelled; tries++){
+      const { t, r } = at();
+      if([...kept, ...stills.filter(s => s.gid === RANDOM_GROUP)].some(s => Math.abs(s.t - t) < minGap)) continue;
+      if(tries < n * 10 && randomSeen.some(x => Math.abs(x - t) < 0.75)) continue;
+      v.currentTime = t; await once(v, 'seeked', 10000);
+      const a = analyzeFrame(v);
+      if(!okFrame(a) && tries < n * 18) continue; // skip black, blank, blurry or badly exposed frames
+      const when = o.sharp ? await seekSharpest(v, t, Math.max(r.start, t - 0.2), Math.min(r.end, t + 0.2)) : t;
+      await addStill(drawFramed(v), when, RANDOM_GROUP, o.fmt);
+      randomSeen.push(when); randomSeen = randomSeen.slice(-Math.max(15, n * 3));
+      made++; renderGallery();
+      bmProgress(made / n, `Random still ${made} of ${n}`);
+    }
+    bmProgress(1, cancelled ? `Stopped. Kept ${made} new stills.` : `Added ${made} random stills${kept.length ? `, kept your ${kept.length} selected` : ''}.`);
+    document.querySelector(`.ggroup[data-gid="${RANDOM_GROUP}"]`)?.scrollIntoView({ block:'start', behavior:'smooth' });
+  }catch(err){
+    console.error(err);
+    bmProgress(0, err.message === 'timeout' ? 'The browser stopped returning frames. Try again.' : (err.message || 'Something went wrong.'));
+  }finally{
+    busy = stillsRunning = false; $('#bmCancel').hidden = true; renderClips(); renderGallery();
+    setTimeout(() => { if(!busy) $('#bmProg').hidden = true; }, 6000);
+  }
+}
+$('#rndGo').addEventListener('click', randomStills);
+
+/* ── hide / show side panels ── */
+function setPanel(side, on){
+  document.querySelector('.app').classList.toggle(side + '-off', !on);
+  $(`#${side}Toggle`).setAttribute('aria-pressed', on);
+  try{ localStorage.setItem('clipcutter-' + side, on ? '1' : '0'); }catch(e){}
+  requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); });
+}
+const panelOn = side => !document.querySelector('.app').classList.contains(side + '-off');
+$('#leftToggle').addEventListener('click', () => setPanel('left', !panelOn('left')));
+$('#rightToggle').addEventListener('click', () => setPanel('right', !panelOn('right')));
+for(const side of ['left','right']){ try{ if(localStorage.getItem('clipcutter-' + side) === '0') setPanel(side, false); }catch(e){} }
 
 /* ── gallery ── */
 function showTab(which){
@@ -2028,7 +2135,7 @@ $('#cancelBtn').addEventListener('click', () => {
   ff.terminate(); ff = null; ffLoading = null; mounted = null;
   loadEngine().catch(() => {});
 });
-$('#exportTop').addEventListener('click', () => $('#exportBtn').click());
+$('#exportTop').addEventListener('click', () => { if(!panelOn('right')) setPanel('right', true); $('#exportBtn').click(); });
 
 $('#exportBtn').addEventListener('click', async () => {
   const picked = state.clips.filter(c => c.on);
