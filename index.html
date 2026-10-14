@@ -694,6 +694,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <button class="btn ghost" id="gBk" title="Save every still to a folder on your computer, or restore from one"><span class="bkdot" id="gBkDot"></span><span id="gBkTxt">Backup</span></button>
         <button class="btn ghost" id="gSelAll" disabled>Select all</button>
         <button class="btn danger-ghost" id="gDel" disabled>Delete</button>
+        <button class="btn danger-ghost" id="gClear" disabled title="Remove every still in this folder (or all folders), with Undo">Clear</button>
         <button class="btn ghost" id="gDlAll" disabled>Download all</button>
         <button class="btn" id="gDlSel" disabled>
           <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg><span id="gDlSelTxt">Download selected</span></button>
@@ -2512,7 +2513,7 @@ function renderFolders(){
   const cur = curBase();
   if(cur && !counts.has(cur)){ counts.set(cur, 0); latest.set(cur, Infinity); }
   // keep the chosen folder listed even while stills are loading or once it's emptied
-  if(gView && !counts.has(gView)){ counts.set(gView, 0); latest.set(gView, -1); }
+  if(gView && !counts.has(gView)){ if(restoring){ counts.set(gView, 0); latest.set(gView, -1); } else gView = ''; }
   const names = [...counts.keys()].sort((a, b) => latest.get(b) - latest.get(a));
   $('#gFolder').innerHTML = `<option value="">All videos (${stills.length})</option>` + names.map(b =>
     `<option value="${esc(b)}">${esc(b)}${b === cur ? ' · open now' : ''} (${counts.get(b)})</option>`).join('');
@@ -2540,6 +2541,8 @@ function renderGallery(){
     : favOnly ? 'No favourites here yet' : gView ? 'No stills from this video yet' : 'No stills yet') + (gView && other ? ` · <span class="num">${other}</span> in other folders` : '');
   $('#gEmpty').hidden = n > 0;
   $('#gSelAll').disabled = $('#gDlAll').disabled = !n;
+  $('#gClear').disabled = !(gView ? stills.some(inFolder) : stills.length);
+  $('#gClear').textContent = gView ? 'Clear folder' : 'Clear all';
   $('#gToGrade').disabled = $('#gAi').disabled = $('#gUp').disabled = !sel;
   $('#gCmp').disabled = sel < 2 || sel > 4;
   $('#gCmp').textContent = sel >= 2 && sel <= 4 ? `Compare ${sel}` : 'Compare';
@@ -2602,6 +2605,13 @@ $('#gSelAll').addEventListener('click', toggleSelectAll);
 $('#gDlSel').addEventListener('click', () => downloadStills(viewStills().filter(s => s.sel), 'selected'));
 $('#gDlAll').addEventListener('click', () => downloadStills(viewStills(), gView ? gView : 'all'));
 $('#gDel').addEventListener('click', () => deleteStills(viewStills().filter(s => s.sel)));
+$('#gClear').addEventListener('click', () => {
+  const list = gView ? stills.filter(inFolder) : stills.slice();
+  if(!list.length) return;
+  const where = gView ? `the “${gView}” folder` : 'every folder';
+  if(!confirm(`Remove all ${list.length} still${list.length === 1 ? '' : 's'} from ${where}?\n\nYou can undo this for a few seconds afterwards. Copies already saved by Backup stay in your backup folder.`)) return;
+  deleteStills(list);
+});
 document.querySelectorAll('.gsize button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.gsize button').forEach(x => x.setAttribute('aria-pressed', x === b));
   $('#stillsView').style.setProperty('--tile', b.dataset.size + 'px');
