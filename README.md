@@ -43,6 +43,14 @@ Give a set of images the same colour grade.
 - Save looks by name and reuse them later. Download one image, the selected ones, or all of them at full resolution (PNG or JPEG, from the Stills card setting). Originals are never changed.
 - Grading runs on the graphics card (WebGL), so sliders update live. Images and looks are kept across refreshes.
 
+**Transcript**
+
+Press **Transcript** in the top bar (or **J**), pick an engine and press **Transcribe**. Each line has its time: click a line to jump the video there, hover it for **+ Clip** (adds that line as a clip) or **Still** (grabs a frame from it). The line being spoken is highlighted while the video plays. Search the transcript, and download it as **TXT** or **SRT** subtitles, or **Copy** it. It's saved with the video, so it's there when you come back; **Redo** transcribes again.
+
+- **Free · Whisper:** OpenAI's open-source speech model, running in your browser with [Transformers.js](https://github.com/huggingface/transformers.js) in a background worker. Nothing is uploaded. **Base** (77 MB, fast) or **Small** (250 MB, more accurate), downloaded once and kept in the browser.
+- **Gemini:** uses your Gemini API key (the same one as Nano Banana). Usually more accurate with names and punctuation, and can label who's speaking. Gemini 3.8 Flash and 3.5 Flash-Lite are on Google's Free tier, within its daily limits. The audio is sent to Google.
+- The audio is taken from the video by the video engine and sent in blocks (2 minutes for Whisper, 5 for Gemini) split at quiet moments.
+
 **Favourites and Compare**
 
 - Click the heart on a still (or press **F** in the viewer) to mark a favourite. **Favourites** at the top of the Stills tab shows only those.

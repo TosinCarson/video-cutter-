@@ -411,6 +411,30 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .ai-row{display:flex;justify-content:space-between;align-items:center}
 .ai-link{background:none;border:0;padding:0;font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer}
 .ai-grp{display:flex;flex-direction:column;gap:10px}
+.trpane{display:flex;flex-direction:column;min-height:100%;height:100%}
+.trpane[hidden],.exportpane[hidden]{display:none}
+.trsetup{display:flex;flex-direction:column;gap:10px}
+.trsetup .sub{font-size:11.5px;color:var(--muted);line-height:1.45}
+.trsetup a{color:var(--text)}
+.trview{flex:1;min-height:0;display:flex;flex-direction:column}
+.trsearch{display:flex;align-items:center;gap:8px;padding:10px 14px}
+.trsearch input{flex:1;min-width:0}
+.trsearch span{font-size:11.5px;color:var(--faint);white-space:nowrap}
+.trlist{flex:1;min-height:120px;overflow-y:auto;padding:0 8px 8px}
+.trl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;padding:7px 8px;border-radius:var(--r);cursor:pointer;position:relative}
+.trl:hover{background:var(--panel-2)}
+.trl.now{background:var(--raised)}
+.trl .trt{font:500 11px var(--mono);color:var(--faint);padding-top:2px}
+.trl .trx{font-size:13px;line-height:1.5;color:var(--text)}
+.trl .trx b{font-weight:600;color:var(--muted);margin-right:4px}
+.trl mark{background:#F5B83D;color:#111;border-radius:2px}
+.trl .tra{grid-column:2;display:none;gap:6px}
+.trl:hover .tra,.trl.now .tra{display:flex}
+.trl .tra button{background:none;border:1px solid var(--line);border-radius:12px;color:var(--muted);font-size:11px;padding:2px 9px;cursor:pointer}
+.trl .tra button:hover{color:var(--text);border-color:var(--text)}
+.trfoot{display:flex;gap:6px;padding:10px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
+.trfoot .btn{flex:1;min-width:0;padding:0 8px}
+#trTop[aria-pressed="true"]{border-color:var(--text)}
 .bkdot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
 .bkdot.on{background:#3DDC84}
 .bkdot.warn{background:#F5B83D}
@@ -551,6 +575,8 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       <button class="btn ghost" id="openBtn">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M5 20h14"/></svg>Open video</button>
       <button class="ib" id="helpBtn" aria-expanded="false" aria-controls="helpCard" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5v.7M12 17h.01"/></svg></button>
+      <button class="btn ghost" id="trTop" aria-pressed="false" title="Transcript of the video (J)">
+        <svg class="i" viewBox="0 0 24 24"><path d="M5 5h14M5 10h14M5 15h9M5 20h6"/></svg>Transcript</button>
       <button class="btn" id="exportTop" aria-pressed="false" title="Export settings (])">
         <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Export</button>
     </div>
@@ -739,6 +765,58 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 
   <!-- right: export -->
   <aside class="right">
+    <div class="trpane" id="trPane" hidden>
+      <div class="sec trhead">
+        <div class="ph" style="padding:0"><h2>Transcript</h2><span class="count num" id="trCount"></span>
+          <button class="ib sm" id="trClose" title="Close (J)" aria-label="Close transcript" style="margin-left:auto"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+      </div>
+      <div class="sec trsetup" id="trSetup">
+        <span class="label">Engine</span>
+        <div class="seg" role="radiogroup" aria-label="Transcription engine">
+          <label><input type="radio" name="trEngine" value="whisper" id="trEngW" checked><span>Free · Whisper</span></label>
+          <label><input type="radio" name="trEngine" value="gemini" id="trEngG"><span>Gemini</span></label>
+        </div>
+        <div class="ai-grp" id="trWOpts">
+          <label class="ai-field"><span>Model</span>
+            <select class="qsel" id="trWModel">
+              <option value="base">Base · fast · 77 MB download</option>
+              <option value="small">Small · more accurate · 250 MB download</option>
+            </select></label>
+          <span class="sub">Runs on this computer; nothing is uploaded. The model downloads once and is kept in this browser.</span>
+        </div>
+        <div class="ai-grp" id="trGOpts" hidden>
+          <label class="ai-field"><span>Model</span>
+            <select class="qsel" id="trGModel">
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (most accurate)</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite (fastest)</option>
+            </select></label>
+          <label class="chk"><input type="checkbox" id="trSpk" checked> Label who's speaking</label>
+          <label class="ai-field" id="trKeyRow"><span>Gemini API key · <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">get one</a></span>
+            <input type="password" class="qsel" id="trKey" autocomplete="off" spellcheck="false" placeholder="Paste your Gemini API key"></label>
+          <span class="sub">Uses your Gemini key (the same one as Nano Banana). Transcription is included in Google's Free tier, within its daily limits. The audio is sent to Google.</span>
+        </div>
+        <label class="ai-field"><span>Language</span>
+          <select class="qsel" id="trLang">
+            <option value="">Detect automatically</option><option value="english">English</option><option value="french">French</option>
+            <option value="spanish">Spanish</option><option value="portuguese">Portuguese</option><option value="german">German</option>
+            <option value="italian">Italian</option><option value="dutch">Dutch</option><option value="arabic">Arabic</option>
+            <option value="hindi">Hindi</option><option value="chinese">Chinese</option><option value="yoruba">Yoruba</option>
+          </select></label>
+        <div class="ai-status" id="trStatus" role="status"></div>
+        <div class="ai-btns"><button class="btn ghost" id="trStop" hidden>Stop</button><button class="btn" id="trGo" disabled>Transcribe</button></div>
+      </div>
+      <div class="trview" id="trView" hidden>
+        <div class="trsearch"><input type="search" class="qsel" id="trQ" placeholder="Search the transcript" aria-label="Search the transcript"><span class="num" id="trHits"></span></div>
+        <div class="trlist" id="trList"></div>
+        <div class="trfoot">
+          <button class="btn ghost" id="trTxt" title="Download as plain text">TXT</button>
+          <button class="btn ghost" id="trSrt" title="Download as subtitles (SRT)">SRT</button>
+          <button class="btn ghost" id="trCopy" title="Copy the whole transcript">Copy</button>
+          <button class="btn ghost" id="trRedo" title="Transcribe again, maybe with the other engine">Redo</button>
+        </div>
+      </div>
+    </div>
+    <div class="exportpane" id="exportPane">
     <div class="sec">
       <div class="ph" style="padding:0"><h2>Export</h2>
         <button class="ib sm" id="exportClose" title="Close (])" aria-label="Close export settings" style="margin-left:auto"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
@@ -803,6 +881,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       </div>
       <div class="err" id="exportErr" hidden></div>
       <ul class="outs" id="outs"></ul>
+    </div>
     </div>
   </aside>
 
@@ -992,6 +1071,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <span><kbd>O</kbd></span><span>Hold: before caption removal (viewer)</span>
         <span><kbd>R</kbd></span><span>Remove captions with AI (viewer)</span>
         <span><kbd>U</kbd></span><span>Upscale (viewer)</span>
+        <span><kbd>J</kbd></span><span>Show / hide the transcript</span>
         <span><kbd>F</kbd></span><span>Favourite (viewer)</span>
         <span><kbd>1</kbd>–<kbd>4</kbd></span><span>Favourite a still (Compare)</span>
         <span><kbd>T</kbd></span><span>Show / hide timeline</span>
@@ -1114,6 +1194,7 @@ async function openFile(file, { restored = false } = {}){
   $('#fileBar').innerHTML = `<b>${esc(file.name)}</b><span class="num">${fmtBytes(file.size)}</span>
     <button class="ib sm" id="closeVid" title="Close this video (it won’t reopen next time)" aria-label="Close video"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
   if(!restored) setFolder(curBase()); else renderGallery();
+  trLoad();
   if(restored) toast(`Reopened ${file.name} from last time`);
   else if(persistOK){
     askPersist();
@@ -1136,7 +1217,7 @@ function closeVideo(){
   $('#fileBar').innerHTML = '<span>No video loaded</span>';
   $('#tDur').textContent = fmt(0); $('#tlEmpty').hidden = false; $('#playhead').hidden = true;
   $('#addTimes').disabled = true; $('#cropZone').hidden = true;
-  drawRuler(); renderFilm(); renderClips(); renderGallery(); setHint(); showTab('video');
+  drawRuler(); renderFilm(); renderClips(); renderGallery(); setHint(); showTab('video'); trLoad();
   idb.del('kv', 'video').catch(() => {});
 }
 $('#fileBar').addEventListener('click', e => { if(e.target.closest('#closeVid')) closeVideo(); });
@@ -1435,7 +1516,8 @@ document.addEventListener('keydown', e => {
   if(e.target.closest('input,select,textarea')) return;
   if(k === 't' || k === 'T'){ setTimeline(document.querySelector('.app').classList.contains('tl-off')); return; }
   if(k === '['){ setPanel('left', !panelOn('left')); return; }
-  if(k === ']'){ setExportPanel(!panelOn('right')); return; }
+  if(k === ']'){ setExportPanel(!(panelOn('right') && !$('#exportPane').hidden)); return; }
+  if(k === 'j' || k === 'J'){ setTranscriptPanel(!(panelOn('right') && !$('#trPane').hidden)); return; }
   if(k === '?'){ toggleHelp(); return; }
   if(k === 'Escape' && !$('#helpCard').hidden){ toggleHelp(false); return; }
   if(!$('#gradeView').hidden){
@@ -2361,6 +2443,8 @@ function setTlHeight(h, save){
 }
 /* Export settings live in the right panel, shown only while you're exporting. */
 function setExportPanel(on){
+  if(on){ $('#exportPane').hidden = false; $('#trPane').hidden = true; $('#trTop').setAttribute('aria-pressed', false); }
+  else if(!$('#trPane').hidden){ $('#exportTop').setAttribute('aria-pressed', false); return; }
   setPanel('right', on);
   $('#exportTop').setAttribute('aria-pressed', on);
   if(on && matchMedia('(max-width:980px)').matches) document.querySelector('.right').scrollIntoView({ behavior:'smooth' });
@@ -3406,7 +3490,7 @@ $('#cancelBtn').addEventListener('click', () => {
   ff.terminate(); ff = null; ffLoading = null; mounted = null;
   loadEngine().catch(() => {});
 });
-$('#exportTop').addEventListener('click', () => setExportPanel(!panelOn('right')));
+$('#exportTop').addEventListener('click', () => setExportPanel(!(panelOn('right') && !$('#exportPane').hidden)));
 
 $('#exportBtn').addEventListener('click', async () => {
   const picked = state.clips.filter(c => c.on);
@@ -3857,6 +3941,340 @@ async function restoreSession(){
   }catch(err){ keepFailed(err); }
   finally{ restoring = false; saveStillsMeta(); }
 }
+/* ══ Transcript ═════════════════════════════════════════════════════
+   The audio is pulled out of the video by the video engine (ffmpeg, 16 kHz
+   mono), split into blocks at quiet moments, and transcribed either by
+   Whisper running in a background worker in this browser (free, nothing
+   uploaded) or by Gemini with the user's key. Each line has its time, so
+   clicking a line jumps the video there; lines can become clips or stills.
+   The transcript is kept per video in this browser's storage. */
+const TF_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.0/dist/transformers.min.js';
+const WHISPER = {
+  base: { id: 'onnx-community/whisper-base', rev: '1846881b6b3a3024392c1eea3ad983695bc23925' },
+  small: { id: 'onnx-community/whisper-small', rev: '36050c46d777d46dc4b5f43f6d90574fc38f8732' },
+};
+const tr = { segs: null, meta: null, abort: null, worker: null, now: -1, q: '' };
+const trKey = () => state.file ? `transcript:${state.file.name}:${state.file.size}` : null;
+const trGet = (k, d) => { try{ return localStorage.getItem('stills-tr-' + k) ?? d; }catch(e){ return d; } };
+const trSet = (k, v) => { try{ localStorage.setItem('stills-tr-' + k, v); }catch(e){} };
+function setTranscriptPanel(on){
+  if(on){ $('#trPane').hidden = false; $('#exportPane').hidden = true; $('#exportTop').setAttribute('aria-pressed', false); }
+  else if(!$('#exportPane').hidden){ $('#trTop').setAttribute('aria-pressed', false); return; }
+  setPanel('right', on);
+  $('#trTop').setAttribute('aria-pressed', on);
+  if(on){ trUI(); if(matchMedia('(max-width:980px)').matches) document.querySelector('.right').scrollIntoView({ behavior:'smooth' }); }
+}
+$('#trTop').addEventListener('click', () => setTranscriptPanel(!(panelOn('right') && !$('#trPane').hidden)));
+$('#trClose').addEventListener('click', () => setTranscriptPanel(false));
+function trUI(){
+  const g = $('#trEngG').checked, has = !!tr.segs?.length, running = !!tr.abort;
+  $('#trWOpts').hidden = g; $('#trGOpts').hidden = !g;
+  $('#trSetup').hidden = has && !running && !tr.redo;
+  $('#trView').hidden = !has || running || tr.redo;
+  $('#trGo').disabled = !state.duration || running;
+  $('#trGo').textContent = has ? 'Transcribe again' : 'Transcribe';
+  $('#trStop').hidden = !running;
+  $('#trCount').textContent = has ? `${tr.segs.length} lines` : '';
+}
+// settings
+$('#trEngW').checked = trGet('engine', 'whisper') !== 'gemini'; $('#trEngG').checked = !$('#trEngW').checked;
+$('#trWModel').value = trGet('wmodel', 'base') === 'small' ? 'small' : 'base';
+$('#trGModel').value = trGet('gmodel', 'gemini-3.8-flash'); if(!$('#trGModel').value) $('#trGModel').value = 'gemini-3.8-flash';
+$('#trLang').value = trGet('lang', '');
+$('#trSpk').checked = trGet('spk', '1') === '1';
+document.querySelectorAll('input[name="trEngine"]').forEach(r => r.addEventListener('change', () => { trSet('engine', $('#trEngG').checked ? 'gemini' : 'whisper'); trUI(); }));
+$('#trWModel').addEventListener('change', e => trSet('wmodel', e.target.value));
+$('#trGModel').addEventListener('change', e => trSet('gmodel', e.target.value));
+$('#trLang').addEventListener('change', e => trSet('lang', e.target.value));
+$('#trSpk').addEventListener('change', e => trSet('spk', e.target.checked ? '1' : '0'));
+$('#trKey').addEventListener('change', e => aiSet('key', e.target.value.trim()));
+
+async function trLoad(){
+  tr.segs = null; tr.meta = null; tr.now = -1; tr.redo = false; $('#trQ').value = ''; tr.q = '';
+  $('#trStatus').textContent = ''; $('#trStatus').classList.remove('err');
+  const k = trKey();
+  if(k && persistOK){ try{ const v = await idb.get('kv', k); if(v?.segs && trKey() === k){ tr.segs = v.segs; tr.meta = v.meta; } }catch(e){} }
+  renderTr(); trUI();
+}
+const trSave = () => { const k = trKey(); if(k && persistOK) idb.put('kv', k, tr.segs ? { segs: tr.segs, meta: tr.meta } : null).catch(() => {}); };
+
+/* 16 kHz mono audio of the open video, as Float32 samples. */
+async function videoAudio(onMsg){
+  onMsg('Getting the audio from the video…');
+  try{
+    await loadEngine();
+    const inp = await inputPath();
+    const code = await ff.exec(['-i', inp, '-vn', '-ac', '1', '-ar', '16000', '-f', 's16le', '-acodec', 'pcm_s16le', 'tr.pcm']);
+    if(code !== 0) throw new Error('no audio');
+    const data = await ff.readFile('tr.pcm'); await ff.deleteFile('tr.pcm');
+    const i16 = new Int16Array(data.buffer, data.byteOffset, data.byteLength >> 1), f = new Float32Array(i16.length);
+    for(let i = 0; i < i16.length; i++) f[i] = i16[i] / 32768;
+    if(f.length) return f;
+  }catch(e){ console.warn('Engine audio failed, trying the browser', e); }
+  // fallback: let the browser decode it
+  const ac = new OfflineAudioContext(1, 16000, 16000);
+  const buf = await ac.decodeAudioData(await state.file.arrayBuffer());
+  const off = new OfflineAudioContext(1, Math.ceil(buf.duration * 16000), 16000);
+  const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start();
+  return (await off.startRendering()).getChannelData(0);
+}
+// split into blocks of about `len` seconds, cutting at the quietest moment near each boundary
+function audioBlocks(a, len){
+  const R = 16000, out = [];
+  let start = 0;
+  while(start < a.length){
+    let end = Math.min(a.length, start + len * R);
+    if(end < a.length){
+      let best = end, bestE = Infinity;
+      for(let c = end - 8 * R; c <= end + 2 * R && c < a.length; c += R / 10){
+        let e = 0; for(let i = c; i < c + R / 10 && i < a.length; i++) e += a[i] * a[i];
+        if(e < bestE){ bestE = e; best = c; }
+      }
+      end = best;
+    }
+    out.push({ off: start / R, data: a.subarray(start, end) });
+    start = end;
+  }
+  return out;
+}
+function wavBytes(f){
+  const n = f.length, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+  const str = (o, t) => { for(let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+  str(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); str(8, 'WAVE'); str(12, 'fmt '); v.setUint32(16, 16, true);
+  v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 16000, true); v.setUint32(28, 32000, true);
+  v.setUint16(32, 2, true); v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, n * 2, true);
+  for(let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.max(-1, Math.min(1, f[i])) * 32767, true);
+  return new Uint8Array(b);
+}
+const bytesB64 = u8 => { let s = ''; for(let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+
+/* Whisper runs in a module worker so the page stays responsive. */
+const WORKER_SRC = `
+import { pipeline, env } from '${TF_URL}';
+env.allowLocalModels = false;
+let asr = null, loaded = '', device = '';
+self.onmessage = async ({ data }) => {
+  try{
+    const key = data.model.id + data.model.rev;
+    if(!asr || loaded !== key){
+      const progress = p => { if(p.status === 'progress' && p.total) self.postMessage({ type: 'dl', file: p.file, loaded: p.loaded, total: p.total }); };
+      const make = dev => pipeline('automatic-speech-recognition', data.model.id, { revision: data.model.rev, device: dev, dtype: 'q8', progress_callback: progress });
+      device = 'wasm';
+      if(data.gpu){ try{ asr = await make('webgpu'); device = 'webgpu'; }catch(e){ asr = null; } }
+      if(!asr) asr = await make('wasm');
+      loaded = key;
+    }
+    self.postMessage({ type: 'ready', device });
+    const out = await asr(data.audio, { return_timestamps: true, chunk_length_s: 30, stride_length_s: 5, task: 'transcribe', ...(data.language ? { language: data.language } : {}) });
+    self.postMessage({ type: 'done', chunks: out.chunks || [{ timestamp: [0, null], text: out.text }] });
+  }catch(e){ self.postMessage({ type: 'error', message: e.message || String(e) }); }
+};`;
+function trWorker(){
+  if(tr.worker) return tr.worker;
+  const url = URL.createObjectURL(new Blob([WORKER_SRC], { type: 'text/javascript' }));
+  return tr.worker = new Worker(url, { type: 'module' });
+}
+function whisperBlock(block, model, language, gpu, onMsg){
+  return new Promise((res, rej) => {
+    const w = trWorker(), files = {};
+    w.onmessage = ({ data: d }) => {
+      if(d.type === 'dl'){ files[d.file] = d; const l = Object.values(files).reduce((a, f) => a + f.loaded, 0), t = Object.values(files).reduce((a, f) => a + f.total, 0);
+        onMsg(`Downloading the speech model, one time only: ${Math.round(l / 1e6)} of ${Math.round(t / 1e6)} MB`); }
+      else if(d.type === 'ready') onMsg(null, d.device);
+      else if(d.type === 'done') res(d.chunks);
+      else if(d.type === 'error') rej(new Error(d.message));
+    };
+    w.onerror = e => rej(new Error(e.message || 'The speech model couldn’t start in this browser.'));
+    const copy = new Float32Array(block); // the worker takes ownership of this copy
+    w.postMessage({ audio: copy, model, language, gpu }, [copy.buffer]);
+  });
+}
+async function whisperRun(audio, signal, onMsg){
+  const m = WHISPER[$('#trWModel').value] || WHISPER.base, language = $('#trLang').value;
+  let gpu = false;
+  try{ const a = await navigator.gpu?.requestAdapter(); gpu = !!a && !(a.info?.isFallbackAdapter || a.isFallbackAdapter); }catch(e){}
+  const blocks = audioBlocks(audio, 120), segs = [];
+  let dev = '';
+  for(let i = 0; i < blocks.length; i++){
+    if(signal.aborted) throw new DOMException('stopped', 'AbortError');
+    const b = blocks[i], blockEnd = b.off + b.data.length / 16000;
+    onMsg(`Transcribing${blocks.length > 1 ? ` part ${i + 1} of ${blocks.length}` : ''}…`);
+    const chunks = await new Promise((res, rej) => {
+      signal.addEventListener('abort', () => { tr.worker?.terminate(); tr.worker = null; rej(new DOMException('stopped', 'AbortError')); }, { once: true });
+      whisperBlock(b.data, m, language, gpu, (msg, d) => { if(d){ dev = d === 'webgpu' ? 'graphics card' : 'processor'; onMsg(`Transcribing${blocks.length > 1 ? ` part ${i + 1} of ${blocks.length}` : ''} on the ${dev}…`); } else onMsg(msg); }).then(res, rej);
+    });
+    for(const c of chunks){
+      const text = (c.text || '').trim(); if(!text) continue;
+      const s0 = b.off + (c.timestamp?.[0] ?? 0), e0 = c.timestamp?.[1] != null ? b.off + c.timestamp[1] : blockEnd;
+      segs.push(...splitSeg({ s: s0, e: Math.max(s0 + 0.3, Math.min(e0, blockEnd)), sp: '', text }));
+    }
+    tr.segs = segs.slice(); renderTr();
+  }
+  return { segs, meta: { engine: 'Whisper ' + $('#trWModel').value, device: dev } };
+}
+
+/* Whisper's lines can run for 20–30 seconds. Split long ones at sentence
+   (then comma) breaks, sharing out the time by length, so clicking a line
+   lands close to the words. */
+function splitSeg(g){
+  const dur = g.e - g.s;
+  if(dur < 7) return [g];
+  let parts = g.text.split(/(?<=[.!?…])\s+/).filter(Boolean);
+  if(parts.length < 2) parts = g.text.split(/(?<=,)\s+/).filter(Boolean);
+  if(parts.length < 2) return [g];
+  const total = parts.reduce((a, p) => a + p.length, 0), out = [];
+  let t = g.s;
+  for(const p of parts){ const d = dur * p.length / total; out.push({ s: t, e: t + d, sp: g.sp, text: p }); t += d; }
+  return out;
+}
+/* Gemini: one request per ~5-minute block, plain lines with times. */
+function textFrom(j){
+  if(typeof j?.output_text === 'string') return j.output_text;
+  const steps = (j?.steps || j?.outputs || []).filter(st => !st.type || st.type === 'model_output');
+  const fromSteps = steps.flatMap(st => (st.content || []).filter(c => c.type === 'text').map(c => c.text)).join('\n');
+  if(fromSteps) return fromSteps;
+  return (j?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('\n');
+}
+const hmsTime = (h, m, sec) => (h ? Number(h) * 3600 : 0) + Number(m) * 60 + Number(sec);
+function parseLines(text, off, end){
+  const out = [];
+  const re = /^\s*\[?\s*(?:(\d+):)?(\d{1,2}):(\d{1,2}(?:\.\d+)?)\s*[-–—]+\s*(?:(\d+):)?(\d{1,2}):(\d{1,2}(?:\.\d+)?)\s*\]?\s*(.*)$/;
+  for(const line of text.split(/\r?\n/)){
+    const m = line.match(re); if(!m) continue;
+    let rest = m[7].trim(), sp = '';
+    const sm = rest.match(/^([^:\[\]]{1,40}):\s+(.*)$/); if(sm){ sp = sm[1].trim(); rest = sm[2].trim(); }
+    if(!rest) continue;
+    const s0 = off + hmsTime(m[1], m[2], m[3]), e0 = off + hmsTime(m[4], m[5], m[6]);
+    out.push({ s: Math.min(s0, end), e: Math.min(Math.max(e0, s0 + 0.3), end), sp: sp === 'Speaker' ? '' : sp, text: rest });
+  }
+  return out;
+}
+async function geminiTranscribe(wavB64, prompt, model, key, signal){
+  const base = 'https://generativelanguage.googleapis.com/v1beta/';
+  const tries = [
+    [base + 'interactions', { model, input: [{ type: 'text', text: prompt }, { type: 'audio', mime_type: 'audio/wav', data: wavB64 }] }],
+    [base + `models/${model}:generateContent`, { contents: [{ role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: 'audio/wav', data: wavB64 } }] }] }],
+  ];
+  let firstErr = null;
+  for(const [url, body] of tries){
+    const res = await fetch(url, { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
+    const j = await res.json().catch(() => ({}));
+    if(!res.ok){
+      const msg = j?.error?.message || `Gemini answered ${res.status}`;
+      if(res.status === 401 || res.status === 403 || res.status === 429 || /api key/i.test(msg)) throw new Error(msg);
+      firstErr ||= msg; continue;
+    }
+    return textFrom(j);
+  }
+  throw new Error(firstErr || 'Gemini didn’t accept the request.');
+}
+async function geminiRun(audio, signal, onMsg){
+  const key = ($('#trKey').value || aiGet('key', '')).trim();
+  if(!key) throw new Error('Paste your Gemini API key first.');
+  aiSet('key', key);
+  const model = $('#trGModel').value, lang = $('#trLang').value, spk = $('#trSpk').checked;
+  const prompt = `Transcribe the speech in this audio exactly as spoken${lang ? ` (the language is ${lang})` : ', in the language it is spoken in'}. `
+    + 'Split it into short segments of one sentence or phrase, at most about 12 seconds each. '
+    + 'Output one segment per line in exactly this format and nothing else:\n[MM:SS.s - MM:SS.s] Speaker: text\n'
+    + 'Times are measured from the start of this audio. '
+    + (spk ? 'For Speaker, use the person’s name once it is clear from the conversation; until then use a role such as Interviewer or Guest. ' : 'Use the word Speaker for every line. ')
+    + 'Leave out music and noises. If there is no speech, output nothing.';
+  const blocks = audioBlocks(audio, 300), segs = [];
+  for(let i = 0; i < blocks.length; i++){
+    if(signal.aborted) throw new DOMException('stopped', 'AbortError');
+    const b = blocks[i];
+    onMsg(`Transcribing${blocks.length > 1 ? ` part ${i + 1} of ${blocks.length}` : ''} with Gemini…`);
+    const text = await geminiTranscribe(bytesB64(wavBytes(b.data)), prompt, model, key, signal);
+    segs.push(...parseLines(text, b.off, b.off + b.data.length / 16000));
+    tr.segs = segs.slice(); renderTr();
+  }
+  if(!segs.length) throw new Error('Gemini didn’t find any speech, or answered in a form this page couldn’t read.');
+  return { segs, meta: { engine: model } };
+}
+$('#trGo').addEventListener('click', async () => {
+  if(tr.abort || !state.duration) return;
+  if(busy){ $('#trStatus').textContent = 'Wait for the export or stills to finish first.'; return; }
+  const g = $('#trEngG').checked;
+  if(g && !($('#trKey').value || aiGet('key', '')).trim()){ $('#trStatus').textContent = 'Paste your Gemini API key first.'; $('#trStatus').classList.add('err'); $('#trKey').focus(); return; }
+  tr.abort = new AbortController(); const prev = { segs: tr.segs, meta: tr.meta };
+  tr.redo = false; tr.segs = null; renderTr(); trUI();
+  const st = $('#trStatus'); st.classList.remove('err');
+  const onMsg = m => { if(m) st.textContent = m; };
+  try{
+    const audio = await videoAudio(onMsg);
+    if(tr.abort.signal.aborted) throw new DOMException('stopped', 'AbortError');
+    const r = g ? await geminiRun(audio, tr.abort.signal, onMsg) : await whisperRun(audio, tr.abort.signal, onMsg);
+    if(!r.segs.length) throw new Error('No speech was found in this video.');
+    tr.segs = r.segs; tr.meta = { ...r.meta, made: Date.now() }; trSave();
+    st.textContent = '';
+    toast(`Transcript ready: ${r.segs.length} lines. Click a line to jump there.`);
+  }catch(e){
+    if(e.name === 'AbortError'){ st.textContent = 'Stopped.'; }
+    else { console.error(e); st.textContent = e.message || String(e); st.classList.add('err'); }
+    if(!tr.segs?.length){ tr.segs = prev.segs; tr.meta = prev.meta; }
+  }finally{
+    tr.abort = null; renderTr(); trUI();
+  }
+});
+$('#trStop').addEventListener('click', () => tr.abort?.abort());
+$('#trRedo').addEventListener('click', () => { tr.redo = true; $('#trKey').value = aiGet('key', ''); trUI(); });
+
+function renderTr(){
+  const list = $('#trList'), segs = tr.segs || [], q = tr.q.trim().toLowerCase();
+  const hl = t => { const e = esc(t); if(!q) return e; const qi = esc(q).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); return e.replace(new RegExp(qi, 'gi'), m => `<mark>${m}</mark>`); };
+  let hits = 0;
+  list.innerHTML = segs.map((g, i) => {
+    if(q && !(g.text.toLowerCase().includes(q) || g.sp.toLowerCase().includes(q))) return '';
+    hits++;
+    return `<div class="trl${i === tr.now ? ' now' : ''}" data-i="${i}"><span class="trt">${fmt(g.s).replace(/\.\d+$/, '')}</span>
+      <div class="trx">${g.sp ? `<b>${esc(g.sp)}:</b>` : ''}${hl(g.text)}</div>
+      <span class="tra"><button data-clip title="Add this line as a clip">+ Clip</button><button data-still title="Grab a still from this line">Still</button></span></div>`;
+  }).join('');
+  $('#trHits').textContent = q ? `${hits} match${hits === 1 ? '' : 'es'}` : '';
+  $('#trCount').textContent = segs.length ? `${segs.length} lines` : '';
+  if(tr.abort && segs.length){ $('#trView').hidden = false; list.scrollTop = list.scrollHeight; }
+}
+$('#trQ').addEventListener('input', e => { tr.q = e.target.value; renderTr(); });
+$('#trList').addEventListener('click', e => {
+  const row = e.target.closest('.trl'); if(!row || !state.duration) return;
+  const g = tr.segs[Number(row.dataset.i)];
+  if(e.target.closest('[data-clip]')){
+    const words = g.text.split(/\s+/).slice(0, 6).join(' ');
+    const c = { id: state.nextId++, name: words.length < g.text.length ? words + '…' : words, start: Math.max(0, g.s), end: Math.min(state.duration, g.e), on: true };
+    state.clips.push(c); state.selId = c.id; saveClips(); renderClips();
+    toast(`Added clip “${c.name}”`); return;
+  }
+  if(e.target.closest('[data-still]')){ grabAt(Math.min(state.duration - 0.05, g.s + Math.min(0.5, (g.e - g.s) / 2))); return; }
+  seek(g.s);
+});
+// follow along while the video plays
+video.addEventListener('timeupdate', () => {
+  if(!tr.segs?.length || $('#trPane').hidden) return;
+  const t = video.currentTime;
+  let i = tr.segs.findIndex(g => t >= g.s && t < g.e);
+  if(i < 0) i = tr.segs.reduce((b, g, k) => g.s <= t ? k : b, -1);
+  if(i === tr.now) return;
+  tr.now = i;
+  document.querySelectorAll('#trList .trl.now').forEach(el => el.classList.remove('now'));
+  const el = document.querySelector(`#trList .trl[data-i="${i}"]`);
+  if(el){ el.classList.add('now'); if(!video.paused) el.scrollIntoView({ block: 'nearest' }); }
+});
+const srtTime = t => { const ms = Math.round(t * 1000), h = Math.floor(ms / 3600000), m = Math.floor(ms / 60000) % 60, s = Math.floor(ms / 1000) % 60;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms % 1000).padStart(3, '0')}`; };
+const trText = () => (tr.segs || []).map(g => `[${fmt(g.s).replace(/\.\d+$/, '')}] ${g.sp ? g.sp + ': ' : ''}${g.text}`).join('\n');
+function trDownload(ext){
+  if(!tr.segs?.length) return;
+  const body = ext === 'srt' ? tr.segs.map((g, i) => `${i + 1}\n${srtTime(g.s)} --> ${srtTime(g.e)}\n${g.sp ? g.sp + ': ' : ''}${g.text}\n`).join('\n') : trText() + '\n';
+  const url = URL.createObjectURL(new Blob([body], { type: 'text/plain;charset=utf-8' }));
+  triggerDownload(url, `${curBase() || 'video'} transcript.${ext}`); setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+$('#trTxt').addEventListener('click', () => trDownload('txt'));
+$('#trSrt').addEventListener('click', () => trDownload('srt'));
+$('#trCopy').addEventListener('click', async () => { try{ await navigator.clipboard.writeText(trText()); toast('Transcript copied'); }catch(e){ toast('The browser didn’t allow copying.'); } });
+$('#trKey').value = aiGet('key', '');
+trUI();
+
+
 restoreSession();
 </script>
 </body>
