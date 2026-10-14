@@ -43,6 +43,19 @@ Give a set of images the same colour grade.
 - Save looks by name and reuse them later. Download one image, the selected ones, or all of them at full resolution (PNG or JPEG, from the Stills card setting). Originals are never changed.
 - Grading runs on the graphics card (WebGL), so sliders update live. Images and looks are kept across refreshes.
 
+**Favourites and Compare**
+
+- Click the heart on a still (or press **F** in the viewer) to mark a favourite. **Favourites** at the top of the Stills tab shows only those.
+- Select 2–4 stills and press **Compare** to see them side by side. Click any picture to zoom all of them to 100% on the same spot (they scroll together), press **1–4** to mark favourites, then **Keep favourites only** deletes the rest (with Undo).
+
+**Upscale**
+
+Select stills and press **Upscale** (or **U** in the viewer), then pick 2× or 4×. It runs free in your browser with [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (`realesr-general-x4v3`, BSD-3-Clause; the 5 MB model is in `models/`), which sharpens edges and cleans up video compression as it enlarges. Each upscaled still is saved as a new still in an "Upscaled" group. It uses the graphics card when it can; on the processor a 1080p still takes a few minutes. 4× is turned off when the result would be over 50 megapixels.
+
+**Backup**
+
+Stills are kept in this browser's storage, which is lost if you clear site data. Press **Backup** in the Stills tab and **Choose folder** (Chrome and Edge): every still is then saved there as a normal image file as soon as you grab it, in a subfolder per video. Choose a folder inside Google Drive, Dropbox or OneDrive on your computer to have it in the cloud too. After a browser restart Chrome may ask for permission again; the button shows **Backup paused** until you press **Allow and resume**. **Import from a folder…** brings stills back (for example on a new computer), skipping ones you already have.
+
 **Remove captions (AI)**
 
 Select stills and press **Remove captions (AI)** in the Stills tab or in the Stills card on the left, or press it (or **R**) in the viewer. Drag a box around the captions, then pick an engine. Each cleaned still is saved as a new still in a "Captions removed" group and the original stays; hold **Hold: before** (or **O**) in the viewer to compare.

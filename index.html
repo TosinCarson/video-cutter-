@@ -284,6 +284,23 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .tchk{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:6px;background:rgba(0,0,0,.6);display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .15s}
 .tile:hover .tchk,.tile.sel .tchk,.tchk:focus-within,.has-sel .tchk{opacity:1}
 .tchk input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
+.tfav{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#EDEDED;display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .15s}
+.tile:hover .tfav,.tfav:focus-visible,.tfav.on{opacity:1}
+.tfav.on,.btn.fav-on,.cmp-cell .ib.on{color:#FF5C7A}
+.tfav.on svg,.btn.fav-on svg,#gFav[aria-pressed="true"] svg,.cmp-cell .ib.on svg{fill:currentColor}
+#gFav[aria-pressed="true"]{border-color:var(--text);color:var(--text)}
+/* compare */
+.cmp{position:fixed;inset:0;z-index:55;background:rgba(6,7,9,.98);display:grid;grid-template-rows:auto minmax(0,1fr)}
+.cmp-grid{display:grid;gap:8px;padding:8px;min-height:0;grid-auto-rows:minmax(0,1fr)}
+.cmp-cell{position:relative;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#000}
+.cmp-cell.on{border-color:#FF5C7A}
+.cmp-img{position:relative;overflow:hidden;min-height:0;cursor:zoom-in}
+.cmp-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;user-select:none}
+.cmp.zoom .cmp-img{overflow:auto;cursor:zoom-out;display:flex}
+.cmp.zoom .cmp-img img{position:static;width:auto;height:auto;max-width:none;margin:auto;flex:none}
+.cmp-bar{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12px;color:var(--muted);background:var(--panel)}
+.cmp-bar b{color:var(--text)}
+.cmp-bar .sp{margin-left:auto}
 .tile figcaption{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:3px 3px 3px 9px;font-size:11.5px;color:var(--muted)}
 .gempty{display:grid;place-items:center;align-content:center;gap:10px;text-align:center;color:var(--muted);padding:48px 20px;min-height:100%}
 .gempty .big{width:52px;height:52px;border-radius:14px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--text)}
@@ -394,6 +411,15 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .ai-row{display:flex;justify-content:space-between;align-items:center}
 .ai-link{background:none;border:0;padding:0;font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer}
 .ai-grp{display:flex;flex-direction:column;gap:10px}
+.bkdot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+.bkdot.on{background:#3DDC84}
+.bkdot.warn{background:#F5B83D}
+.up-body .row{display:flex;gap:8px;flex-wrap:wrap}
+.up-body .row .btn{flex:1}
+.up-body hr{border:0;border-top:1px solid var(--line);margin:4px 0}
+.up-card{width:min(440px,100%);background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.up-body{padding:14px;display:flex;flex-direction:column;gap:10px}
+.up-body .sub{font-size:11.5px;color:var(--muted);line-height:1.45}
 .ai-grp[hidden]{display:none}
 .ai-status{font-size:12px;color:var(--muted);min-height:18px}
 .ai-status.err{color:var(--danger)}
@@ -628,14 +654,18 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     <div class="view" id="stillsView" role="tabpanel" aria-labelledby="tabStills" hidden>
       <div class="gbar">
         <select class="sel gfolder" id="gFolder" aria-label="Folder" title="Each video's stills are kept in their own folder. All videos shows every still."></select>
+        <button class="btn ghost" id="gFav" aria-pressed="false" title="Show only favourites (mark them with the heart, or F in the viewer)"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg><span id="gFavTxt">Favourites</span></button>
         <span class="ginfo" id="gInfo">No stills yet</span>
         <div class="gsize" role="group" aria-label="Thumbnail size">
           <button data-size="130" aria-pressed="false" title="Small thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></svg></button>
           <button data-size="190" aria-pressed="true" title="Medium thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="1" width="6.5" height="6.5" rx="1"/><rect x="1" y="8.5" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="8.5" width="6.5" height="6.5" rx="1"/></svg></button>
           <button data-size="300" aria-pressed="false" title="Large thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg></button>
         </div>
+        <button class="btn ghost" id="gCmp" disabled title="Compare 2–4 selected stills side by side">Compare</button>
         <button class="btn ghost" id="gAi" disabled title="Remove captions from the selected stills: free on this computer, or with Nano Banana">Remove captions (AI)</button>
+        <button class="btn ghost" id="gUp" disabled title="Make the selected stills 2× or 4× bigger and sharper (free, on this computer)">Upscale</button>
         <button class="btn ghost" id="gToGrade" disabled title="Copy the selected stills into the Grade tab">Grade selected</button>
+        <button class="btn ghost" id="gBk" title="Save every still to a folder on your computer, or restore from one"><span class="bkdot" id="gBkDot"></span><span id="gBkTxt">Backup</span></button>
         <button class="btn ghost" id="gSelAll" disabled>Select all</button>
         <button class="btn danger-ghost" id="gDel" disabled>Delete</button>
         <button class="btn ghost" id="gDlAll" disabled>Download all</button>
@@ -811,9 +841,11 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-labelledby="lbTitle" hidden>
   <div class="lb-top">
     <div class="lb-title"><b id="lbTitle"></b><span class="num" id="lbMeta"></span></div>
+    <button class="btn ghost" id="lbFav" title="Favourite (F)"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg><span>Favourite</span></button>
     <button class="btn ghost" id="lbSel" title="Select (X)">Select</button>
     <button class="btn ghost" id="lbOrig" hidden title="Hold to see the still before captions were removed (O)">Hold: before</button>
     <button class="btn ghost" id="lbAi" title="Remove captions from this still (R)">Remove captions (AI)</button>
+    <button class="btn ghost" id="lbUp" title="Make this still 2× or 4× bigger and sharper (U)">Upscale</button>
     <button class="btn ghost" id="lbZoom" title="Toggle fit / actual size (Z)">100%</button>
     <button class="btn ghost" id="lbJump" title="Show this moment on the Video tab">Show in video</button>
     <button class="btn danger-ghost" id="lbDel">Delete</button>
@@ -824,6 +856,63 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     <img id="lbImg" alt="">
     <button class="lb-nav prev" id="lbPrev" aria-label="Previous still (←)"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
     <button class="lb-nav next" id="lbNext" aria-label="Next still (→)"><svg class="i" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+</div>
+
+<div class="cmp" id="cmp" role="dialog" aria-modal="true" aria-labelledby="cmpTitle" hidden>
+  <div class="lb-top">
+    <div class="lb-title"><b id="cmpTitle">Compare</b><span>Click a picture to see all of them at 100% · 1–4 or the heart to mark favourites</span></div>
+    <button class="btn ghost" id="cmpKeep" title="Delete the ones you didn't mark as favourite (you can undo)">Keep favourites only</button>
+    <button class="ib" id="cmpClose" title="Close (Esc)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="cmp-grid" id="cmpGrid"></div>
+</div>
+
+<div class="ai" id="bk" role="dialog" aria-modal="true" aria-labelledby="bkTitle" hidden>
+  <div class="up-card">
+    <div class="ai-head">
+      <b id="bkTitle">Backup</b><span></span>
+      <button class="ib" id="bkClose" title="Close (Esc)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="up-body">
+      <span class="label">Save to a folder</span>
+      <div class="ai-status" id="bkState" role="status"></div>
+      <div class="row" id="bkBtns">
+        <button class="btn" id="bkPick">Choose folder</button>
+        <button class="btn ghost" id="bkNow" hidden>Save now</button>
+        <button class="btn ghost" id="bkStop" hidden>Stop</button>
+      </div>
+      <span class="sub" id="bkHelp">Every still is saved as soon as you grab it, in a subfolder for each video. Pick a folder inside Google Drive, Dropbox or OneDrive on your computer and your stills are in the cloud too. Deleting a still here doesn't delete its saved copy.</span>
+      <hr>
+      <span class="label">Restore</span>
+      <span class="sub">Bring stills back from a backup folder (or any folder of images), for example on a new computer or after clearing the browser. Stills you already have are skipped.</span>
+      <div class="row"><button class="btn ghost" id="bkImport">Import from a folder…</button></div>
+      <input type="file" id="bkInput" webkitdirectory multiple hidden>
+      <div class="ai-status" id="bkImpStatus" role="status"></div>
+    </div>
+  </div>
+</div>
+
+<div class="ai" id="up" role="dialog" aria-modal="true" aria-labelledby="upTitle" hidden>
+  <div class="up-card">
+    <div class="ai-head">
+      <b id="upTitle">Upscale</b><span id="upSub"></span>
+      <button class="ib" id="upClose" title="Close (Esc)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="up-body">
+      <span class="label">How much bigger</span>
+      <div class="seg" role="radiogroup" aria-label="How much bigger">
+        <label><input type="radio" name="upX" value="2" id="upX2" checked><span>2×</span></label>
+        <label><input type="radio" name="upX" value="4" id="upX4"><span>4×</span></label>
+      </div>
+      <span class="sub" id="upDesc"></span>
+      <span class="sub">Free, on this computer, with the Real-ESRGAN model (5 MB, downloaded once). Each upscaled still is saved as a new still in an "Upscaled" group; the original stays. 2× usually looks most natural; 4× is for printing or big crops.</span>
+      <div class="ai-status" id="upStatus" role="status"></div>
+      <div class="ai-btns">
+        <button class="btn ghost" id="upCancel">Close</button>
+        <button class="btn" id="upGo">Upscale</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -902,6 +991,9 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
         <span><kbd>O</kbd></span><span>Hold: before caption removal (viewer)</span>
         <span><kbd>R</kbd></span><span>Remove captions with AI (viewer)</span>
+        <span><kbd>U</kbd></span><span>Upscale (viewer)</span>
+        <span><kbd>F</kbd></span><span>Favourite (viewer)</span>
+        <span><kbd>1</kbd>–<kbd>4</kbd></span><span>Favourite a still (Compare)</span>
         <span><kbd>T</kbd></span><span>Show / hide timeline</span>
         <span><kbd>\</kbd></span><span>Hold to see the original (Grade)</span>
         <span><kbd>[</kbd></span><span>Show / hide the Clips panel</span>
@@ -1331,6 +1423,13 @@ function setHint(msg){
 document.addEventListener('keydown', e => {
   const k = e.key;
   if(!$('#ai').hidden){ if(k === 'Escape') closeAi(); return; }
+  if(!$('#up').hidden){ if(k === 'Escape') closeUp(); return; }
+  if(!$('#bk').hidden){ if(k === 'Escape') $('#bk').hidden = true; return; }
+  if(!$('#cmp').hidden){
+    if(k === 'Escape') closeCmp();
+    else if(/^[1-4]$/.test(k) && cmpList[k - 1]) toggleFav(cmpList[k - 1]);
+    return;
+  }
   if(!$('#lb').hidden){ lbKey(e); return; }
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target.closest('input,select,textarea')) return;
@@ -1821,9 +1920,9 @@ function drawFramed(src){
   return cv;
 }
 const canvasBlob = (cv, type, q) => new Promise(r => cv.toBlob(r, type, q));
-async function addStill(cv, t, gid, fmtName, beforeCv = null, base = null){
+async function addStill(cv, t, gid, fmtName, beforeCv = null, base = null, given = null){
   const png = fmtName === 'png';
-  const blob = await canvasBlob(cv, png ? 'image/png' : 'image/jpeg', png ? undefined : 0.97);
+  const blob = given || await canvasBlob(cv, png ? 'image/png' : 'image/jpeg', png ? undefined : 0.97);
   if(!blob) throw new Error('This browser couldn’t read that frame.');
   const k = Math.min(1, 480 / Math.max(cv.width, cv.height));
   const tc = document.createElement('canvas');
@@ -1831,13 +1930,14 @@ async function addStill(cv, t, gid, fmtName, beforeCv = null, base = null){
   tc.getContext('2d').drawImage(cv, 0, 0, tc.width, tc.height);
   const thumbBlob = await canvasBlob(tc, 'image/jpeg', 0.82);
   const s = { id: stillSeq++, gid, blob, url: URL.createObjectURL(blob), thumb: URL.createObjectURL(thumbBlob), w: cv.width, h: cv.height, t, sel: false,
-    ext: png ? 'png' : 'jpg', base: base || safeName(state.file.name.replace(/\.[^.]+$/,'')) };
+    ext: fmtName === 'webp' ? 'webp' : png ? 'png' : 'jpg', base: base || safeName(state.file.name.replace(/\.[^.]+$/,'')) };
   if(beforeCv){
     s.before = await canvasBlob(beforeCv, 'image/jpeg', 0.9);
     s.beforeUrl = s.before && URL.createObjectURL(s.before);
   }
   stills.push(s);
   if(persistOK){ askPersist(); idb.put('blobs', s.id, { blob, thumb: thumbBlob, before: s.before || null }).catch(keepFailed); }
+  bkSoon();
   return s;
 }
 
@@ -2312,7 +2412,9 @@ const orderedStills = () => groups.slice().reverse().flatMap(g => stills.filter(
    the way without being deleted. */
 const curBase = () => state.file ? safeName(state.file.name.replace(/\.[^.]+$/,'')) : null;
 let gView = (() => { try{ return localStorage.getItem('stills-folder') || ''; }catch(e){ return ''; } })();
-const inView = s => !gView || s.base === gView;
+let favOnly = (() => { try{ return localStorage.getItem('stills-favonly') === '1'; }catch(e){ return false; } })();
+const inFolder = s => !gView || s.base === gView;
+const inView = s => inFolder(s) && (!favOnly || s.fav);
 const viewStills = () => orderedStills().filter(inView);
 function setFolder(v){
   gView = v || '';
@@ -2334,7 +2436,7 @@ function renderFolders(){
 }
 $('#gFolder').addEventListener('change', e => setFolder(e.target.value));
 const ICON_DL = '<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>';
-const stillMeta = s => ({ id:s.id, gid:s.gid, w:s.w, h:s.h, t:s.t, sel:s.sel, ext:s.ext, base:s.base });
+const stillMeta = s => ({ id:s.id, gid:s.gid, w:s.w, h:s.h, t:s.t, sel:s.sel, ext:s.ext, base:s.base, fav:!!s.fav });
 let metaTimer = null;
 function saveStillsMeta(){
   if(!persistOK || restoring) return;
@@ -2346,13 +2448,17 @@ function saveStillsMeta(){
 function renderGallery(){
   saveStillsMeta();
   renderFolders();
-  const vis = viewStills(), n = vis.length, sel = vis.filter(s => s.sel).length, other = stills.length - n;
+  const favN = stills.filter(s => s.fav && inFolder(s)).length;
+  $('#gFav').setAttribute('aria-pressed', favOnly); $('#gFavTxt').textContent = favN ? `Favourites (${favN})` : 'Favourites';
+  const vis = viewStills(), n = vis.length, sel = vis.filter(s => s.sel).length, other = stills.length - stills.filter(inFolder).length;
   const badge = $('#stillCount'); badge.hidden = !n; badge.textContent = n;
   $('#gInfo').innerHTML = (n ? `<b class="num">${n}</b> still${n === 1 ? '' : 's'}${sel ? ` · <b class="num">${sel}</b> selected` : ''}`
-    : gView ? 'No stills from this video yet' : 'No stills yet') + (gView && other ? ` · <span class="num">${other}</span> in other folders` : '');
+    : favOnly ? 'No favourites here yet' : gView ? 'No stills from this video yet' : 'No stills yet') + (gView && other ? ` · <span class="num">${other}</span> in other folders` : '');
   $('#gEmpty').hidden = n > 0;
   $('#gSelAll').disabled = $('#gDlAll').disabled = !n;
-  $('#gToGrade').disabled = $('#gAi').disabled = !sel;
+  $('#gToGrade').disabled = $('#gAi').disabled = $('#gUp').disabled = !sel;
+  $('#gCmp').disabled = sel < 2 || sel > 4;
+  $('#gCmp').textContent = sel >= 2 && sel <= 4 ? `Compare ${sel}` : 'Compare';
   $('#gToGrade').textContent = sel ? `Grade ${sel}` : 'Grade selected';
   syncBm();
   $('#gSelAll').textContent = n && sel === n ? 'Clear selection' : 'Select all';
@@ -2370,6 +2476,7 @@ function renderGallery(){
       <div class="ggrid">${items.map(s => `
         <figure class="tile${s.sel ? ' sel' : ''}" data-id="${s.id}">
           <button class="timg" data-open style="aspect-ratio:${s.w}/${s.h}" aria-label="View still at ${fmt(s.t)}"><img src="${s.thumb}" alt="" loading="lazy"></button>
+          <button class="tfav${s.fav ? ' on' : ''}" data-fav title="${s.fav ? 'Remove from favourites' : 'Add to favourites'}" aria-label="Favourite" aria-pressed="${!!s.fav}"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg></button>
           <label class="tchk" title="Select (Shift-click for a range)"><input type="checkbox" data-sel ${s.sel ? 'checked' : ''} aria-label="Select still at ${fmt(s.t)}"></label>
           <figcaption><span class="num">${fmt(s.t)}</span><button class="ib sm" data-dl title="Download this still" aria-label="Download still at ${fmt(s.t)}">${ICON_DL}</button></figcaption>
         </figure>`).join('')}</div>
@@ -2395,6 +2502,7 @@ $('#gGroups').addEventListener('click', e => {
   if(e.target.closest('[data-gdl]')){ const g = groups.find(g => g.id === grp.dataset.gid); downloadStills(stills.filter(s => s.gid === g.id && inView(s)), g.title); return; }
   if(!tile) return;
   const s = stillById(Number(tile.dataset.id));
+  if(e.target.closest('[data-fav]')){ toggleFav(s); return; }
   if(e.target.closest('[data-dl]')){ downloadStills([s]); return; }
   if(e.target.closest('[data-open]')){
     if(e.metaKey || e.ctrlKey || e.shiftKey){ setSel(s, !s.sel, e.shiftKey); renderGallery(); }
@@ -2456,6 +2564,189 @@ function flushUndo(){
   undoBuf = null;
 }
 
+/* ══ Backup to a folder ═════════════════════════════════════════════
+   Stills live in this browser's storage, which is lost if site data is
+   cleared. With a folder picked (Chrome and Edge can write to one), every
+   still is also saved there as a normal image file, one subfolder per
+   video. Chrome asks again for permission after a restart; until then the
+   backup is paused and the Backup button says so. Import reads a folder
+   back in, skipping stills that are already here. */
+const BK_TAGS = { upscaled: ' upscaled', 'ai-clean': ' no captions' };
+const bk = { dir: null, state: 'off', busy: false, again: false, done: new Set(), saved: 0, err: '' };
+const bkSupported = typeof window.showDirectoryPicker === 'function';
+const bkFile = s => `${s.base} ${fileTime(s.t)}${BK_TAGS[s.gid] || ''}`;
+function bkUI(){
+  const n = stills.filter(s => !bk.done.has(s.id)).length;
+  const dot = $('#gBkDot'); dot.className = 'bkdot' + (bk.state === 'on' ? ' on' : bk.state === 'paused' ? ' warn' : '');
+  $('#gBkTxt').textContent = bk.state === 'on' ? (bk.busy ? 'Saving…' : 'Backed up') : bk.state === 'paused' ? 'Backup paused' : 'Backup';
+  $('#bkPick').textContent = bk.dir ? 'Choose a different folder' : 'Choose folder';
+  $('#bkNow').hidden = !bk.dir; $('#bkStop').hidden = !bk.dir;
+  $('#bkNow').textContent = bk.state === 'paused' ? 'Allow and resume' : 'Save now';
+  $('#bkPick').disabled = !bkSupported;
+  const st = $('#bkState');
+  st.classList.toggle('err', !!bk.err || bk.state === 'paused');
+  st.textContent = !bkSupported ? 'This browser can’t save to a folder automatically (Chrome and Edge can). Use Download all (ZIP) to keep a copy instead.'
+    : bk.err ? bk.err
+    : bk.state === 'off' ? 'Not set up. Your stills are only in this browser.'
+    : bk.state === 'paused' ? `Paused: the browser needs your permission again for “${bk.dir.name}”.${n ? ` ${n} still${n === 1 ? '' : 's'} not saved yet.` : ''}`
+    : bk.busy ? `Saving to “${bk.dir.name}”…`
+    : `On. Saving to “${bk.dir.name}”.${n ? ` ${n} waiting.` : ' Everything is saved.'}`;
+}
+async function bkLoad(){
+  if(!bkSupported || !persistOK) { bkUI(); return; }
+  try{
+    const saved = await idb.get('kv', 'backup');
+    if(saved?.dir){
+      bk.dir = saved.dir; bk.done = new Set(saved.done || []);
+      bk.state = (await bk.dir.queryPermission({ mode: 'readwrite' })) === 'granted' ? 'on' : 'paused';
+      if(bk.state === 'paused' && stills.some(s => !bk.done.has(s.id))) toast('Backup is paused. Click Backup in the Stills tab to resume.', { ms: 6000 });
+    }
+  }catch(e){ console.warn('Backup settings unreadable', e); }
+  bkUI(); if(bk.state === 'on') bkSync();
+}
+const bkSave = () => { if(persistOK) idb.put('kv', 'backup', bk.dir ? { dir: bk.dir, done: [...bk.done] } : null).catch(() => {}); };
+let bkTimer = null;
+function bkSoon(){ clearTimeout(bkTimer); bkTimer = setTimeout(bkSync, 800); }
+async function bkSync(){
+  if(!bk.dir || bk.state !== 'on') { bkUI(); return; }
+  if(bk.busy){ bk.again = true; return; }
+  bk.busy = true; bk.err = ''; bkUI();
+  try{
+    for(const s of stills.slice()){
+      if(bk.done.has(s.id) || !stills.includes(s)) continue;
+      const sub = await bk.dir.getDirectoryHandle(safeName(s.base) || 'Stills', { create: true });
+      // same name already there: if it's this very file (same size), it's saved; otherwise number it
+      for(let k = 1; ; k++){
+        const name = `${bkFile(s)}${k > 1 ? ` (${k})` : ''}.${s.ext}`;
+        let fh = null;
+        try{ fh = await sub.getFileHandle(name); }catch(e){ if(e.name !== 'NotFoundError' && e.name !== 'TypeMismatchError') throw e; }
+        if(fh){ if((await fh.getFile()).size === s.blob.size) break; continue; }
+        fh = await sub.getFileHandle(name, { create: true });
+        const w = await fh.createWritable(); await w.write(s.blob); await w.close();
+        break;
+      }
+      bk.done.add(s.id); bkSave(); bkUI();
+    }
+  }catch(e){
+    console.warn('Backup failed', e);
+    if(e.name === 'NotAllowedError' || e.name === 'SecurityError') bk.state = 'paused';
+    else bk.err = e.name === 'NotFoundError' ? `The folder “${bk.dir.name}” is gone. Choose it again.` : `Couldn’t save to “${bk.dir.name}”: ${e.message}`;
+  }finally{
+    bk.busy = false; bkUI();
+    if(bk.again){ bk.again = false; bkSoon(); }
+  }
+}
+$('#gBk').addEventListener('click', () => { bk.err = bk.err || ''; bkUI(); $('#bkImpStatus').textContent = ''; $('#bk').hidden = false; });
+$('#bkClose').addEventListener('click', () => { $('#bk').hidden = true; });
+$('#bk').addEventListener('click', e => { if(e.target === e.currentTarget) $('#bk').hidden = true; });
+$('#bkPick').addEventListener('click', async () => {
+  try{
+    const dir = await showDirectoryPicker({ id: 'stills-backup', mode: 'readwrite', startIn: 'pictures' });
+    if(bk.dir && !(await bk.dir.isSameEntry(dir))) bk.done = new Set();
+    bk.dir = dir; bk.state = 'on'; bk.err = ''; bkSave(); bkSync();
+    toast(`Backing up to “${dir.name}”`);
+  }catch(e){ if(e.name !== 'AbortError'){ bk.err = e.message; bkUI(); } }
+});
+$('#bkNow').addEventListener('click', async () => {
+  if(!bk.dir) return;
+  try{ if((await bk.dir.requestPermission({ mode: 'readwrite' })) !== 'granted'){ bk.state = 'paused'; bkUI(); return; } }
+  catch(e){ bk.err = e.message; bkUI(); return; }
+  bk.state = 'on'; bk.err = ''; bkSync();
+});
+$('#bkStop').addEventListener('click', () => {
+  bk.dir = null; bk.state = 'off'; bk.err = ''; bk.done = new Set(); bkSave(); bkUI();
+  toast('Backup stopped. Files already saved stay in the folder.');
+});
+$('#bkImport').addEventListener('click', () => $('#bkInput').click());
+$('#bkInput').addEventListener('change', async e => {
+  const files = [...e.target.files].filter(f => /^image\/(png|jpe?g|webp)$/.test(f.type) || /\.(png|jpe?g|webp)$/i.test(f.name));
+  e.target.value = '';
+  const st = $('#bkImpStatus');
+  if(!files.length){ st.textContent = 'No images found in that folder.'; return; }
+  const RESTORED = 'restored';
+  let added = 0, skipped = 0;
+  for(let i = 0; i < files.length; i++){
+    const f = files[i];
+    st.textContent = `Importing ${i + 1} of ${files.length}…`;
+    const parts = (f.webkitRelativePath || f.name).split('/');
+    const base = parts.length > 2 ? safeName(parts[parts.length - 2]) : safeName(f.name.replace(/ \d+m\d{2}\.\d{2}s.*$|\.[^.]+$/, '')) || 'Imported';
+    const m = f.name.match(/(\d+)m(\d{2}\.\d{2})s/), t = m ? Number(m[1]) * 60 + Number(m[2]) : 0;
+    const gid = /upscaled\./i.test(f.name) ? 'upscaled' : /no captions\./i.test(f.name) ? AI_GROUP : RESTORED;
+    if(stills.some(s => s.base === base && Math.abs(s.t - t) < 0.005 && s.blob.size === f.size)){ skipped++; continue; }
+    try{
+      const bm = await createImageBitmap(f), cv = document.createElement('canvas');
+      cv.width = bm.width; cv.height = bm.height; cv.getContext('2d').drawImage(bm, 0, 0);
+      const g = { [RESTORED]: { title: 'Restored from backup', sub: 'Imported from a folder' }, upscaled: UP_GROUP, [AI_GROUP]: { title: 'Captions removed', sub: 'Cleaned with LaMa (free) or Nano Banana' } }[gid];
+      if(!groups.some(x => x.id === gid)) groups.push({ id: gid, title: g.title, sub: g.sub });
+      await addStill(cv, t, gid, /\.png$/i.test(f.name) ? 'png' : /\.webp$/i.test(f.name) ? 'webp' : 'jpg', null, base, f);
+      added++;
+    }catch(err){ console.warn('Skipped', f.name, err); skipped++; }
+  }
+  renderGallery();
+  st.textContent = `Imported ${added} still${added === 1 ? '' : 's'}${skipped ? `, skipped ${skipped} (already here or unreadable)` : ''}.`;
+  if(added){ setFolder(''); }
+});
+
+/* ── favourites & compare ── */
+function toggleFav(s){
+  s.fav = !s.fav;
+  renderGallery(); if(!$('#cmp').hidden) renderCmp();
+}
+$('#gFav').addEventListener('click', () => {
+  favOnly = !favOnly; try{ localStorage.setItem('stills-favonly', favOnly ? '1' : '0'); }catch(e){}
+  stills.forEach(s => { if(!inView(s)) s.sel = false; });
+  renderGallery();
+});
+let cmpList = [];
+function openCmp(list){
+  cmpList = list.slice(0, 4); if(cmpList.length < 2) return;
+  $('#cmp').hidden = false; $('#cmp').classList.remove('zoom'); renderCmp();
+}
+function closeCmp(){ $('#cmp').hidden = true; cmpList = []; }
+function renderCmp(){
+  cmpList = cmpList.filter(s => stills.includes(s));
+  if(!cmpList.length){ closeCmp(); return; }
+  const n = cmpList.length, wide = innerWidth > 900;
+  $('#cmpTitle').textContent = `Compare · ${n} still${n === 1 ? '' : 's'}`;
+  $('#cmpGrid').style.gridTemplateColumns = `repeat(${wide ? n : Math.min(n, 2)}, minmax(0,1fr))`;
+  $('#cmpGrid').innerHTML = cmpList.map((s, i) => `
+    <div class="cmp-cell${s.fav ? ' on' : ''}" data-id="${s.id}">
+      <div class="cmp-img" data-z><img src="${s.url}" alt="Still at ${fmt(s.t)}" draggable="false"></div>
+      <div class="cmp-bar"><b class="num">${i + 1}</b><span class="num">${fmt(s.t)} · ${s.w}×${s.h}</span>
+        <span class="sp"></span>
+        <button class="ib sm${s.fav ? ' on' : ''}" data-cfav title="Favourite (${i + 1})" aria-label="Favourite" aria-pressed="${!!s.fav}"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg></button>
+        <button class="btn danger-ghost" data-cdel>Delete</button></div>
+    </div>`).join('');
+}
+$('#gCmp').addEventListener('click', () => openCmp(viewStills().filter(s => s.sel)));
+$('#cmpClose').addEventListener('click', closeCmp);
+$('#cmpKeep').addEventListener('click', () => {
+  const drop = cmpList.filter(s => !s.fav);
+  if(drop.length === cmpList.length){ toast('Mark the ones to keep with the heart (or 1–4) first.'); return; }
+  closeCmp(); deleteStills(drop);
+});
+// click a picture: all of them zoom to 100% on the same spot, and scroll together
+$('#cmpGrid').addEventListener('click', e => {
+  const cell = e.target.closest('.cmp-cell'); if(!cell) return;
+  const s = stillById(Number(cell.dataset.id));
+  if(e.target.closest('[data-cfav]')){ toggleFav(s); return; }
+  if(e.target.closest('[data-cdel]')){ cmpList = cmpList.filter(x => x !== s); deleteStills([s]); renderCmp(); return; }
+  const box = e.target.closest('[data-z]'); if(!box) return;
+  const r = box.querySelector('img').getBoundingClientRect(), on = !$('#cmp').classList.contains('zoom');
+  const fx = clamp((e.clientX - r.left) / r.width, 0, 1), fy = clamp((e.clientY - r.top) / r.height, 0, 1);
+  $('#cmp').classList.toggle('zoom', on);
+  if(on) document.querySelectorAll('.cmp-img').forEach(b => { const im = b.querySelector('img');
+    b.scrollLeft = im.naturalWidth * fx - b.clientWidth / 2; b.scrollTop = im.naturalHeight * fy - b.clientHeight / 2; });
+});
+let cmpSyncing = false;
+$('#cmpGrid').addEventListener('scroll', e => {
+  if(cmpSyncing || !e.target.classList?.contains('cmp-img')) return;
+  const a = e.target, fx = a.scrollLeft / Math.max(1, a.scrollWidth - a.clientWidth), fy = a.scrollTop / Math.max(1, a.scrollHeight - a.clientHeight);
+  cmpSyncing = true;
+  document.querySelectorAll('.cmp-img').forEach(b => { if(b !== a){ b.scrollLeft = fx * (b.scrollWidth - b.clientWidth); b.scrollTop = fy * (b.scrollHeight - b.clientHeight); } });
+  requestAnimationFrame(() => { cmpSyncing = false; });
+}, true);
+
 /* ── viewer ── */
 function openLb(id){ lbIndex = viewStills().findIndex(s => s.id === id); $('#lb').hidden = false; renderLb(); $('#lbClose').focus(); }
 function closeLb(){ $('#lb').hidden = true; $('#lbBody').classList.remove('zoom'); }
@@ -2489,6 +2780,7 @@ function renderLb(){
   $('#lbImg').alt = `Still at ${fmt(s.t)}`;
   $('#lbTitle').textContent = `${g?.title || 'Still'} · ${fmt(s.t)}`;
   $('#lbMeta').textContent = `${lbIndex + 1} of ${list.length} · ${s.w}×${s.h} · ${s.ext.toUpperCase()} · ${fmtBytes(s.blob.size)}`;
+  $('#lbFav').classList.toggle('fav-on', !!s.fav); $('#lbFav').setAttribute('aria-pressed', !!s.fav);
   const b = $('#lbSel'); b.classList.toggle('picked', s.sel); b.classList.toggle('ghost', !s.sel);
   b.textContent = s.sel ? '✓ Selected' : 'Select';
   $('#lbPrev').disabled = lbIndex === 0; $('#lbNext').disabled = lbIndex === list.length - 1;
@@ -2500,6 +2792,7 @@ $('#lbNext').addEventListener('click', () => lbStep(1));
 $('#lbClose').addEventListener('click', closeLb);
 $('#lbBody').addEventListener('click', e => { if(e.target === e.currentTarget) closeLb(); });
 $('#lbSel').addEventListener('click', () => { const s = lbStill(); setSel(s, !s.sel, false); renderGallery(); });
+$('#lbFav').addEventListener('click', () => { const s = lbStill(); if(s) toggleFav(s); });
 $('#lbDl').addEventListener('click', () => downloadStills([lbStill()]));
 $('#lbDel').addEventListener('click', () => deleteStills([lbStill()]));
 $('#lbJump').addEventListener('click', () => { const s = lbStill(); closeLb(); showTab('video'); seek(s.t); });
@@ -2512,6 +2805,8 @@ function lbKey(e){
   else if(k === 'd' || k === 'D'){ $('#lbDl').click(); }
   else if(k === 'z' || k === 'Z'){ toggleZoom(); }
   else if(k === 'r' || k === 'R'){ $('#lbAi').click(); }
+  else if(k === 'u' || k === 'U'){ $('#lbUp').click(); }
+  else if(k === 'f' || k === 'F'){ $('#lbFav').click(); }
   else if((k === 'o' || k === 'O') && !e.repeat){ showBefore(true); }
 }
 
@@ -2752,12 +3047,12 @@ async function aiClean(s, signal){
 }
 /* Save a cleaned still next to the original, keeping the captioned frame
    (the still itself, or what it was made from) for before/after. */
-async function aiSave(s, src, out){
+async function aiSave(s, src, out, grp = { id: AI_GROUP, title: 'Captions removed', sub: 'Cleaned with LaMa (free) or Nano Banana' }){
   const W = src.width, H = src.height;
   const before = document.createElement('canvas'); before.width = W; before.height = H;
   before.getContext('2d', { alpha: false }).drawImage(s.before ? await blobImage(s.before) : src, 0, 0, W, H);
-  if(!groups.some(g => g.id === AI_GROUP)) groups.push({ id: AI_GROUP, title: 'Captions removed', sub: 'Cleaned with LaMa (free) or Nano Banana' });
-  return addStill(out, s.t, AI_GROUP, s.ext === 'png' ? 'png' : 'jpg', before, s.base);
+  if(!groups.some(g => g.id === grp.id)) groups.push({ ...grp });
+  return addStill(out, s.t, grp.id, s.ext === 'png' ? 'png' : 'jpg', before, s.base);
 }
 /* ══ Free caption removal with LaMa ═════════════════════════════════
    LaMa (Samsung AI Center, Apache-2.0) is an open inpainting model: give it
@@ -2772,48 +3067,64 @@ const ORT_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.29.0/dist/';
 const LAMA = {
   url: 'https://huggingface.co/Carve/LaMa-ONNX/resolve/c3c0c9e468934d62e79c329e35d82dd09ff8c444/lama_fp32.onnx',
   sha256: '1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6',
-  size: 208044816, side: 512,
+  size: 208044816, side: 512, label: 'free model',
 };
 let lamaReady = false, lamaLoading = null;
 const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-async function lamaBytes(onMsg, signal){
+/* Download a model file once, check its SHA-256, keep it in this browser's
+   cache. Shared by the caption remover and the upscaler. */
+async function modelBytes(m, onMsg, signal){
   let cache = null;
-  try{ cache = await caches.open('stills-models'); const hit = await cache.match(LAMA.url); if(hit) return await hit.arrayBuffer(); }catch(e){ cache = null; }
-  const res = await fetch(LAMA.url, { signal });
-  if(!res.ok) throw new Error(`Couldn’t download the free model (${res.status}). Check your connection and try again.`);
-  const total = +res.headers.get('content-length') || LAMA.size, reader = res.body.getReader(), buf = new Uint8Array(LAMA.size);
+  const key = new URL(m.url, location.href).href;
+  try{ cache = await caches.open('stills-models'); const hit = await cache.match(key); if(hit) return await hit.arrayBuffer(); }catch(e){ cache = null; }
+  const res = await fetch(m.url, { signal });
+  if(!res.ok) throw new Error(`Couldn’t download the ${m.label} (${res.status}). Check your connection and try again.`);
+  const reader = res.body.getReader(), buf = new Uint8Array(m.size);
   let got = 0;
   for(;;){
     const { done, value } = await reader.read(); if(done) break;
-    if(got + value.length > buf.length) throw new Error('The free model download was the wrong size.');
+    if(got + value.length > buf.length) throw new Error(`The ${m.label} download was the wrong size.`);
     buf.set(value, got); got += value.length;
-    onMsg(`downloading the free model, one time only: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`);
+    if(m.size > 20e6) onMsg(`downloading the ${m.label}, one time only: ${Math.round(got / 1e6)} of ${Math.round(m.size / 1e6)} MB`);
   }
-  if(got !== LAMA.size) throw new Error('The free model download was cut short. Try again.');
+  if(got !== m.size) throw new Error(`The ${m.label} download was cut short. Try again.`);
   onMsg('checking the model file…');
-  if(hex(await crypto.subtle.digest('SHA-256', buf)) !== LAMA.sha256) throw new Error('The downloaded model file didn’t match the expected one, so it wasn’t used.');
-  try{ await cache?.put(LAMA.url, new Response(buf, { headers: { 'content-type': 'application/octet-stream' } })); }catch(e){ /* no room to keep it: download again next time */ }
+  if(hex(await crypto.subtle.digest('SHA-256', buf)) !== m.sha256) throw new Error(`The downloaded ${m.label} didn’t match the expected file, so it wasn’t used.`);
+  try{ await cache?.put(key, new Response(buf, { headers: { 'content-type': 'application/octet-stream' } })); }catch(e){ /* no room to keep it: download again next time */ }
   return buf.buffer;
+}
+/* ONNX Runtime Web, loaded on first use. Uses the graphics card (WebGPU)
+   when there's a real one; otherwise the processor, in a background worker
+   so the page doesn't freeze. */
+let ortLoading = null, ortUseGpu = null;
+function ortLib(){
+  return ortLoading ||= import(ORT_BASE + 'ort.webgpu.min.mjs').then(ort => {
+    ort.env.wasm.wasmPaths = ORT_BASE; ort.env.logLevel = 'error'; ort.env.wasm.proxy = true; return ort;
+  }).catch(err => { ortLoading = null; throw err; });
+}
+async function ortSession(bytes, onMsg){
+  const ort = await ortLib();
+  onMsg('starting the model…');
+  if(ortUseGpu === null){
+    let gpu = null;
+    try{ gpu = await navigator.gpu?.requestAdapter(); }catch(e){}
+    ortUseGpu = !!gpu && !(gpu.info?.isFallbackAdapter || gpu.isFallbackAdapter);
+  }
+  if(ortUseGpu){
+    try{ return { ort, sess: await ort.InferenceSession.create(bytes, { executionProviders: ['webgpu'] }), ep: 'graphics card' }; }
+    catch(e){ console.warn('WebGPU failed, using the processor', e); ortUseGpu = false; }
+  }
+  try{ return { ort, sess: await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }), ep: 'processor' }; }
+  catch(e){
+    if(!ort.env.wasm.proxy) throw e;
+    console.warn('Worker failed, running on the page', e); ort.env.wasm.proxy = false;
+    return { ort, sess: await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }), ep: 'processor' };
+  }
 }
 function lamaSession(onMsg, signal){
   return lamaLoading ||= (async () => {
-    const ort = await import(ORT_BASE + 'ort.webgpu.min.mjs');
-    ort.env.wasm.wasmPaths = ORT_BASE;
-    ort.env.logLevel = 'error';
-    const bytes = await lamaBytes(onMsg, signal);
-    onMsg('starting the model…');
-    let gpu = null;
-    try{ gpu = await navigator.gpu?.requestAdapter(); }catch(e){}
-    if(gpu && !(gpu.info?.isFallbackAdapter || gpu.isFallbackAdapter)){
-      try{ const sess = await ort.InferenceSession.create(bytes, { executionProviders: ['webgpu'] }); lamaReady = true; return { ort, sess, ep: 'graphics card' }; }
-      catch(e){ console.warn('WebGPU failed, using the processor', e); }
-    }
-    // on the processor, run in a background worker so the page doesn't freeze
-    let sess;
-    try{ ort.env.wasm.proxy = true; sess = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }); }
-    catch(e){ console.warn('Worker failed, running on the page', e); ort.env.wasm.proxy = false; sess = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }); }
-    lamaReady = true;
-    return { ort, sess, ep: 'processor' };
+    const r = await ortSession(await modelBytes(LAMA, onMsg, signal), onMsg);
+    lamaReady = true; return r;
   })().catch(err => { lamaLoading = null; throw err; });
 }
 // grow a mask by r pixels (square neighbourhood, two passes)
@@ -2928,6 +3239,113 @@ async function lamaClean(s, signal, onMsg){
   fx.putImageData(reg, R.x, R.y);
   return aiSave(s, src, full);
 }
+
+/* ══ Upscale (Real-ESRGAN, free, in the browser) ════════════════════
+   realesr-general-x4v3 (BSD-3-Clause, Xintao Wang) turns each pixel into
+   4×4, sharpening edges and cleaning compression as it goes. The model is
+   small enough to ship with the page (models/). Stills are processed in
+   192px squares with a 16px margin so there are no seams; for 2× each
+   square is scaled down as it's placed, which looks cleaner than a 2×
+   model and keeps memory low. */
+const UPSCALER = { url: 'models/realesr-general-x4v3.onnx', sha256: 'ae5ae0cb93425761acbe86d0f2663eaf0da1fba3178989df633cb1aacbe6c9a1', size: 4973147, label: 'upscaler' };
+const UP_MAX_PX = 50e6, UP_GROUP = { id: 'upscaled', title: 'Upscaled', sub: 'Made bigger with Real-ESRGAN' };
+const up = { list: [], x: 2, abort: null, fromLb: false };
+let upLoading = null;
+const upSession = (onMsg, signal) => upLoading ||= (async () => ortSession(await modelBytes(UPSCALER, onMsg, signal), onMsg))().catch(err => { upLoading = null; throw err; });
+try{ up.x = localStorage.getItem('stills-up-x') === '4' ? 4 : 2; }catch(e){}
+function openUp(list, fromLb = false){
+  list = list.filter(Boolean);
+  if(!list.length) return;
+  if(up.abort){ toast('Still upscaling the last batch.'); return; }
+  up.list = list; up.fromLb = fromLb;
+  const big = list.some(s => s.w * s.h * 16 > UP_MAX_PX);
+  $('#upX4').disabled = big;
+  if(big && up.x === 4) up.x = 2;
+  $(up.x === 4 ? '#upX4' : '#upX2').checked = true;
+  $('#upSub').textContent = list.length === 1 ? '' : `${list.length} stills`;
+  upStatus(big ? '4× is off: the result would be too big for the browser.' : '');
+  upSync();
+  $('#up').hidden = false; $('#upGo').focus();
+}
+function closeUp(){ if(up.abort){ up.abort.abort(); return; } $('#up').hidden = true; }
+function upStatus(msg, err = false){ const el = $('#upStatus'); el.textContent = msg; el.classList.toggle('err', err); }
+function upSync(){
+  const s = up.list[0];
+  $('#upDesc').textContent = `${up.list.length > 1 ? 'First still: ' : ''}${s.w}×${s.h} → ${s.w * up.x}×${s.h * up.x}`;
+  $('#upGo').textContent = `Upscale${up.list.length > 1 ? ` ${up.list.length} stills` : ''} ${up.x}×`;
+}
+document.querySelectorAll('input[name="upX"]').forEach(r => r.addEventListener('change', () => {
+  up.x = $('#upX4').checked ? 4 : 2; try{ localStorage.setItem('stills-up-x', String(up.x)); }catch(e){} upSync();
+}));
+$('#upClose').addEventListener('click', closeUp);
+$('#upCancel').addEventListener('click', closeUp);
+$('#up').addEventListener('click', e => { if(e.target === e.currentTarget && !up.abort) closeUp(); });
+$('#gUp').addEventListener('click', () => openUp(viewStills().filter(s => s.sel)));
+$('#lbUp').addEventListener('click', () => openUp([lbStill()], true));
+
+async function upscaleStill(s, x, signal, onMsg){
+  const { ort, sess, ep } = await upSession(onMsg, signal);
+  const src = await blobImage(s.blob), W = src.width, H = src.height;
+  const fc = document.createElement('canvas'); fc.width = W; fc.height = H;
+  const fx = fc.getContext('2d', { alpha: false, willReadFrequently: true }); fx.drawImage(src, 0, 0);
+  const sd = fx.getImageData(0, 0, W, H).data;
+  const out = document.createElement('canvas'); out.width = W * x; out.height = H * x;
+  const ox = out.getContext('2d', { alpha: false });
+  ox.imageSmoothingQuality = 'high';
+  const T = 192, P = 16, tc = document.createElement('canvas'), tx = tc.getContext('2d');
+  const tiles = [];
+  for(let ty = 0; ty < H; ty += T) for(let tx0 = 0; tx0 < W; tx0 += T) tiles.push([tx0, ty]);
+  for(let i = 0; i < tiles.length; i++){
+    if(signal.aborted) throw new DOMException('stopped', 'AbortError');
+    if(i % 4 === 0) onMsg(`${Math.round(i / tiles.length * 100)}% on the ${ep}…`);
+    const [ax, ay] = tiles[i], tw = Math.min(T, W - ax), th = Math.min(T, H - ay);
+    const x0 = Math.max(0, ax - P), y0 = Math.max(0, ay - P), x1 = Math.min(W, ax + tw + P), y1 = Math.min(H, ay + th + P);
+    const cw = x1 - x0, ch = y1 - y0, n = cw * ch, inp = new Float32Array(3 * n);
+    for(let y = 0; y < ch; y++) for(let xx = 0; xx < cw; xx++){
+      const p = y * cw + xx, q = ((y0 + y) * W + x0 + xx) * 4;
+      inp[p] = sd[q] / 255; inp[n + p] = sd[q+1] / 255; inp[2*n + p] = sd[q+2] / 255;
+    }
+    const res = await sess.run({ image: new ort.Tensor('float32', inp, [1, 3, ch, cw]) });
+    const o = res.upscaled_image.data, OW = cw * 4, ON = OW * ch * 4;
+    const img = new ImageData(tw * 4, th * 4), d = img.data, offX = (ax - x0) * 4, offY = (ay - y0) * 4;
+    for(let y = 0; y < th * 4; y++) for(let xx = 0; xx < tw * 4; xx++){
+      const q = (offY + y) * OW + offX + xx, p = (y * tw * 4 + xx) * 4;
+      d[p] = o[q] * 255; d[p+1] = o[ON + q] * 255; d[p+2] = o[2*ON + q] * 255; d[p+3] = 255;
+    }
+    if(x === 4) ox.putImageData(img, ax * 4, ay * 4);
+    else { tc.width = tw * 4; tc.height = th * 4; tx.putImageData(img, 0, 0); ox.drawImage(tc, ax * x, ay * x, tw * x, th * x); }
+  }
+  onMsg('saving…');
+  return aiSave(s, src, out, UP_GROUP);
+}
+$('#upGo').addEventListener('click', async () => {
+  if(up.abort) return;
+  up.abort = new AbortController();
+  $('#upGo').disabled = true; $('#upCancel').textContent = 'Stop';
+  document.querySelectorAll('input[name="upX"]').forEach(r => r.disabled = true);
+  const made = [], list = up.list.slice();
+  let err = '';
+  try{
+    for(let i = 0; i < list.length && !up.abort.signal.aborted; i++){
+      const which = list.length > 1 ? `Still ${i + 1} of ${list.length}: ` : '';
+      try{ made.push(await upscaleStill(list[i], up.x, up.abort.signal, m => upStatus(which + m))); renderGallery(); }
+      catch(e){ if(e.name === 'AbortError') break; err = e.message || String(e); console.error(e); break; }
+    }
+  }finally{
+    const stopped = up.abort.signal.aborted;
+    up.abort = null; $('#upGo').disabled = false; $('#upCancel').textContent = 'Close';
+    document.querySelectorAll('input[name="upX"]').forEach(r => r.disabled = false);
+    if(list.some(s => s.w * s.h * 16 > UP_MAX_PX)) $('#upX4').disabled = true;
+    renderGallery();
+    if(err) upStatus(`${made.length ? `${made.length} done. ` : ''}${err}`, true);
+    else if(stopped) upStatus(made.length ? `Stopped. ${made.length} upscaled.` : 'Stopped.');
+    else if(made.length){
+      $('#up').hidden = true;
+      if(up.fromLb && made.length === 1){ lbIndex = viewStills().indexOf(made[0]); renderLb(); toast(`Upscaled to ${made[0].w}×${made[0].h}. Press Z to see it at 100%.`); }
+      else toast(`Upscaled ${made.length} still${made.length === 1 ? '' : 's'}`);
+    }
+  }
+});
 
 $('#aiGo').addEventListener('click', async () => {
   if(ai.abort) return;
@@ -3429,7 +3847,7 @@ async function restoreSession(){
       const keep = new Set(stills.map(s => s.id));
       for(const k of await idb.keys('blobs')) if(typeof k === 'number' && !keep.has(k)) idb.del('blobs', k).catch(() => {});
     }
-    restoring = false; renderGallery();
+    restoring = false; renderGallery(); bkLoad();
     await restoreGrade();
     const v = await idb.get('kv', 'video');
     if(v?.blob && !state.file){
