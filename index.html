@@ -2666,6 +2666,7 @@ $('#aiGo').addEventListener('click', async () => {
       catch(err){
         if(err.name === 'AbortError') break;
         failed++; lastErr = err.message || String(err);
+        if(/free tier|limit: 0/i.test(lastErr)) lastErr = 'Your Gemini key is on Google’s Free tier, which allows no Nano Banana images. Turn on billing for its project in Google AI Studio (Set up billing next to the key, or ai.dev/rate-limit), then try again. The same key keeps working.';
         if(list.length === 1 || /api key|permission|quota|exhausted|billing/i.test(lastErr)) break;
       }
     }
