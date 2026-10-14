@@ -73,7 +73,8 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
   height:100%;display:grid;gap:1px;background:var(--line);
   --lw:300px;--rw:290px;
   grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);
-  grid-template-rows:52px minmax(0,1fr) 236px;
+  --th:236px;
+  grid-template-rows:52px minmax(0,1fr) var(--th);
   grid-template-areas:"top top top" "left center right" "tl tl tl";
 }
 .app > *{background:var(--panel);min-width:0;min-height:0}
@@ -259,6 +260,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .bm .bm-prog{display:grid;gap:6px}
 .ginfo{font-size:12.5px;color:var(--muted);margin-right:auto;min-width:0}
 .ginfo b{color:var(--text);font-weight:600}
+.gfolder{max-width:260px;min-width:0;height:32px}
 .gsize{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:2px;gap:2px}
 .gsize button{width:28px;height:26px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
 .gsize button[aria-pressed="true"]{background:var(--raised);color:var(--text)}
@@ -411,6 +413,11 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .sizer:hover::after,.sizer.on::after,.sizer:focus-visible::after{background:var(--muted)}
 .sizer:focus-visible{outline:none}
 .app.left-off .sizer.l,.app.right-off .sizer.r{display:none}
+.sizer.t{grid-area:tl;align-self:start;width:auto;height:9px;margin-top:-5px;cursor:row-resize}
+.sizer.t::after{inset:4px 0}
+.app.tl-off .sizer.t{display:none}
+body.sizing-v{cursor:row-resize;user-select:none}
+body.sizing-v video{pointer-events:none}
 body.sizing{cursor:col-resize;user-select:none}
 body.sizing iframe,body.sizing video{pointer-events:none}
 .ptgl[aria-pressed="false"]{color:var(--faint)}
@@ -620,6 +627,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 
     <div class="view" id="stillsView" role="tabpanel" aria-labelledby="tabStills" hidden>
       <div class="gbar">
+        <select class="sel gfolder" id="gFolder" aria-label="Folder" title="Each video's stills are kept in their own folder. All videos shows every still."></select>
         <span class="ginfo" id="gInfo">No stills yet</span>
         <div class="gsize" role="group" aria-label="Thumbnail size">
           <button data-size="130" aria-pressed="false" title="Small thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></svg></button>
@@ -770,6 +778,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 
   <div class="sizer l" role="separator" aria-orientation="vertical" aria-label="Resize the Clips panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
   <div class="sizer r" role="separator" aria-orientation="vertical" aria-label="Resize the Export panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
+  <div class="sizer t" role="separator" aria-orientation="horizontal" aria-label="Resize the timeline" tabindex="0" title="Drag to change the timeline height · double-click to reset"></div>
 
   <!-- timeline -->
   <section class="tl" aria-label="Timeline">
@@ -1012,6 +1021,7 @@ async function openFile(file, { restored = false } = {}){
   video.src = state.url;
   $('#fileBar').innerHTML = `<b>${esc(file.name)}</b><span class="num">${fmtBytes(file.size)}</span>
     <button class="ib sm" id="closeVid" title="Close this video (it won’t reopen next time)" aria-label="Close video"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+  if(!restored) setFolder(curBase()); else renderGallery();
   if(restored) toast(`Reopened ${file.name} from last time`);
   else if(persistOK){
     askPersist();
@@ -1034,7 +1044,7 @@ function closeVideo(){
   $('#fileBar').innerHTML = '<span>No video loaded</span>';
   $('#tDur').textContent = fmt(0); $('#tlEmpty').hidden = false; $('#playhead').hidden = true;
   $('#addTimes').disabled = true; $('#cropZone').hidden = true;
-  drawRuler(); renderFilm(); renderClips(); setHint(); showTab('video');
+  drawRuler(); renderFilm(); renderClips(); renderGallery(); setHint(); showTab('video');
   idb.del('kv', 'video').catch(() => {});
 }
 $('#fileBar').addEventListener('click', e => { if(e.target.closest('#closeVid')) closeVideo(); });
@@ -1064,7 +1074,7 @@ async function buildFilmstrip(){
   tv.muted = true; tv.preload = 'auto'; tv.playsInline = true; tv.src = state.url;
   try{
     await once(tv, 'loadeddata', 15000);
-    const h = 90, w = Math.max(40, Math.round(h * (tv.videoWidth / tv.videoHeight || 16/9)));
+    const h = 160, w = Math.max(40, Math.round(h * (tv.videoWidth / tv.videoHeight || 16/9)));
     const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
     const ctx = cv.getContext('2d');
     for(let i = 0; i < FILM_FRAMES; i++){
@@ -1336,7 +1346,7 @@ document.addEventListener('keydown', e => {
   }
   if(!$('#stillsView').hidden){
     if(k === 'a' || k === 'A'){ e.preventDefault(); toggleSelectAll(); }
-    else if(k === 'Delete'){ deleteStills(stills.filter(s => s.sel)); }
+    else if(k === 'Delete'){ deleteStills(viewStills().filter(s => s.sel)); }
     return;
   }
   if(!state.duration) return;
@@ -2087,7 +2097,7 @@ function syncBm(){
   $('#bmClips').disabled = !ticked;
   $('#bmClipsTxt').textContent = ticked ? `Ticked clips (${ticked})` : 'Ticked clips';
   if(!ticked && $('#bmClips').checked) $('#bmAll').checked = true;
-  try{ $('#rndTxt').textContent = stills.some(s => s.gid === RANDOM_GROUP) ? 'Shuffle again' : 'Random'; }catch(e){ /* gallery not set up yet */ }
+  try{ $('#rndTxt').textContent = stills.some(s => s.gid === RANDOM_GROUP && s.base === curBase()) ? 'Shuffle again' : 'Random'; }catch(e){ /* gallery not set up yet */ }
 }
 $('#bmOpen2').addEventListener('click', () => { setPanel('left', true); findBestMoments(); });
 $('#bmGo').addEventListener('click', findBestMoments);
@@ -2114,7 +2124,7 @@ async function randomStills(){
     const v = await captureVideo(), o = stillOpts();
     let g = groups.find(g => g.id === RANDOM_GROUP);
     if(g){
-      const swap = stills.filter(s => s.gid === RANDOM_GROUP && !s.sel);
+      const swap = stills.filter(s => s.gid === RANDOM_GROUP && s.base === curBase() && !s.sel);
       for(const s of swap){
         stills.splice(stills.indexOf(s), 1);
         URL.revokeObjectURL(s.url); URL.revokeObjectURL(s.thumb); idb.del('blobs', s.id).catch(() => {});
@@ -2122,7 +2132,7 @@ async function randomStills(){
       groups.splice(groups.indexOf(g), 1);
     } else g = { id: RANDOM_GROUP, title: 'Random picks' };
     groups.push(g); // newest group shows first
-    const kept = stills.filter(s => s.gid === RANDOM_GROUP);
+    const kept = stills.filter(s => s.gid === RANDOM_GROUP && s.base === curBase());
     g.sub = `${fromClips ? 'From ticked clips' : 'From the whole video'} · select the ones you like, then Shuffle again`;
     renderGallery();
     // Learn what a normal frame looks like in this video from a quick sample,
@@ -2141,7 +2151,7 @@ async function randomStills(){
     const at = () => { let x = Math.random() * total; for(const r of ranges){ const d = r.end - r.start; if(x < d) return { t: r.start + x, r }; x -= d; } return { t: ranges[0].start, r: ranges[0] }; };
     for(let tries = 0; made < n && tries < n * 20 && !cancelled; tries++){
       const { t, r } = at();
-      if([...kept, ...stills.filter(s => s.gid === RANDOM_GROUP)].some(s => Math.abs(s.t - t) < minGap)) continue;
+      if([...kept, ...stills.filter(s => s.gid === RANDOM_GROUP && s.base === curBase())].some(s => Math.abs(s.t - t) < minGap)) continue;
       if(tries < n * 10 && randomSeen.some(x => Math.abs(x - t) < 0.75)) continue;
       v.currentTime = t; await once(v, 'seeked', 10000);
       const a = analyzeFrame(v);
@@ -2187,7 +2197,7 @@ function setPanelWidth(side, w, save){
   if(save) try{ localStorage.setItem('stills-w-' + side, String(w)); }catch(e){}
   return w;
 }
-document.querySelectorAll('.sizer').forEach(h => {
+document.querySelectorAll('.sizer.l, .sizer.r').forEach(h => {
   const side = h.classList.contains('l') ? 'left' : 'right';
   let raf = 0;
   const relayout = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); }); };
@@ -2213,7 +2223,42 @@ document.querySelectorAll('.sizer').forEach(h => {
   });
 });
 try{ ['left','right'].forEach(side => { const w = +localStorage.getItem('stills-w-' + side); if(w) setPanelWidth(side, w); }); }catch(e){}
-addEventListener('resize', () => ['left','right'].forEach(side => { if(panelOn(side)) setPanelWidth(side, panelWidth(side)); }));
+addEventListener('resize', () => { ['left','right'].forEach(side => { if(panelOn(side)) setPanelWidth(side, panelWidth(side)); }); setTlHeight(tlHeight()); });
+/* Drag the top edge of the timeline to make it taller or shorter. */
+const TL_H = 236, TL_MIN = 150, TOP_H = 52, STAGE_MIN = 200;
+const tlHeight = () => parseFloat(getComputedStyle($('.app')).getPropertyValue('--th')) || TL_H;
+function setTlHeight(h, save){
+  const app = $('.app');
+  h = Math.round(clamp(h, TL_MIN, Math.max(TL_MIN, app.clientHeight - TOP_H - STAGE_MIN)));
+  app.style.setProperty('--th', h + 'px');
+  if(save) try{ localStorage.setItem('stills-tl-h', String(h)); }catch(e){}
+  return h;
+}
+{
+  const h = $('.sizer.t');
+  let raf = 0;
+  const relayout = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); }); };
+  h.addEventListener('pointerdown', e => {
+    if(e.button !== 0) return;
+    e.preventDefault(); h.setPointerCapture(e.pointerId);
+    h.classList.add('on'); document.body.classList.add('sizing-v');
+    const bottom = $('.app').getBoundingClientRect().bottom;
+    const move = ev => { setTlHeight(bottom - ev.clientY); relayout(); };
+    const up = () => {
+      h.classList.remove('on'); document.body.classList.remove('sizing-v');
+      h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up);
+      setTlHeight(tlHeight(), true);
+    };
+    h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+  });
+  h.addEventListener('dblclick', () => { setTlHeight(TL_H, true); relayout(); });
+  h.addEventListener('keydown', e => {
+    if(e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault(); e.stopPropagation();
+    setTlHeight(tlHeight() + (e.shiftKey ? 40 : 10) * (e.key === 'ArrowUp' ? 1 : -1), true); relayout();
+  });
+  try{ const v = +localStorage.getItem('stills-tl-h'); if(v) setTlHeight(v); }catch(e){}
+}
 /* Export settings live in the right panel, shown only while you're exporting. */
 function setExportPanel(on){
   setPanel('right', on);
@@ -2261,6 +2306,33 @@ $('#tabVideo').addEventListener('click', () => showTab('video'));
 $('#tabStills').addEventListener('click', () => showTab('stills'));
 
 const orderedStills = () => groups.slice().reverse().flatMap(g => stills.filter(s => s.gid === g.id));
+/* Folders: every still belongs to the video it was grabbed from (by file
+   name). The Stills tab shows one video's folder, or All videos. Opening a
+   new video switches to its folder, so earlier videos' stills stay out of
+   the way without being deleted. */
+const curBase = () => state.file ? safeName(state.file.name.replace(/\.[^.]+$/,'')) : null;
+let gView = (() => { try{ return localStorage.getItem('stills-folder') || ''; }catch(e){ return ''; } })();
+const inView = s => !gView || s.base === gView;
+const viewStills = () => orderedStills().filter(inView);
+function setFolder(v){
+  gView = v || '';
+  try{ localStorage.setItem('stills-folder', gView); }catch(e){}
+  stills.forEach(s => { if(!inView(s)) s.sel = false; });
+  renderGallery();
+}
+function renderFolders(){
+  const counts = new Map(), latest = new Map();
+  for(const s of stills){ counts.set(s.base, (counts.get(s.base) || 0) + 1); latest.set(s.base, Math.max(latest.get(s.base) || 0, s.id)); }
+  const cur = curBase();
+  if(cur && !counts.has(cur)){ counts.set(cur, 0); latest.set(cur, Infinity); }
+  // keep the chosen folder listed even while stills are loading or once it's emptied
+  if(gView && !counts.has(gView)){ counts.set(gView, 0); latest.set(gView, -1); }
+  const names = [...counts.keys()].sort((a, b) => latest.get(b) - latest.get(a));
+  $('#gFolder').innerHTML = `<option value="">All videos (${stills.length})</option>` + names.map(b =>
+    `<option value="${esc(b)}">${esc(b)}${b === cur ? ' · open now' : ''} (${counts.get(b)})</option>`).join('');
+  $('#gFolder').value = gView;
+}
+$('#gFolder').addEventListener('change', e => setFolder(e.target.value));
 const ICON_DL = '<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>';
 const stillMeta = s => ({ id:s.id, gid:s.gid, w:s.w, h:s.h, t:s.t, sel:s.sel, ext:s.ext, base:s.base });
 let metaTimer = null;
@@ -2273,9 +2345,11 @@ function saveStillsMeta(){
 }
 function renderGallery(){
   saveStillsMeta();
-  const n = stills.length, sel = stills.filter(s => s.sel).length;
+  renderFolders();
+  const vis = viewStills(), n = vis.length, sel = vis.filter(s => s.sel).length, other = stills.length - n;
   const badge = $('#stillCount'); badge.hidden = !n; badge.textContent = n;
-  $('#gInfo').innerHTML = n ? `<b class="num">${n}</b> still${n === 1 ? '' : 's'}${sel ? ` · <b class="num">${sel}</b> selected` : ''}` : 'No stills yet';
+  $('#gInfo').innerHTML = (n ? `<b class="num">${n}</b> still${n === 1 ? '' : 's'}${sel ? ` · <b class="num">${sel}</b> selected` : ''}`
+    : gView ? 'No stills from this video yet' : 'No stills yet') + (gView && other ? ` · <span class="num">${other}</span> in other folders` : '');
   $('#gEmpty').hidden = n > 0;
   $('#gSelAll').disabled = $('#gDlAll').disabled = !n;
   $('#gToGrade').disabled = $('#gAi').disabled = !sel;
@@ -2287,7 +2361,7 @@ function renderGallery(){
   $('#gDel').textContent = sel ? `Delete ${sel}` : 'Delete';
   $('#gGroups').classList.toggle('has-sel', sel > 0);
   $('#gGroups').innerHTML = groups.slice().reverse().map(g => {
-    const items = stills.filter(s => s.gid === g.id);
+    const items = stills.filter(s => s.gid === g.id && inView(s));
     if(!items.length) return '';
     const all = items.every(s => s.sel);
     return `<section class="ggroup" data-gid="${g.id}">
@@ -2306,19 +2380,19 @@ function renderGallery(){
 const stillById = id => stills.find(s => s.id === id);
 function setSel(s, on, range){
   if(range && lastSelId != null){
-    const list = orderedStills(), a = list.findIndex(x => x.id === lastSelId), b = list.indexOf(s);
+    const list = viewStills(), a = list.findIndex(x => x.id === lastSelId), b = list.indexOf(s);
     if(a >= 0) list.slice(Math.min(a,b), Math.max(a,b) + 1).forEach(x => x.sel = on);
   }
   s.sel = on; lastSelId = s.id;
 }
-function toggleSelectAll(){ const all = stills.length && stills.every(s => s.sel); stills.forEach(s => s.sel = !all); renderGallery(); }
+function toggleSelectAll(){ const vis = viewStills(), all = vis.length && vis.every(s => s.sel); vis.forEach(s => s.sel = !all); renderGallery(); }
 $('#gGroups').addEventListener('click', e => {
   const tile = e.target.closest('.tile'), grp = e.target.closest('.ggroup');
   if(e.target.closest('[data-gsel]')){
-    const items = stills.filter(s => s.gid === grp.dataset.gid), all = items.every(s => s.sel);
+    const items = stills.filter(s => s.gid === grp.dataset.gid && inView(s)), all = items.every(s => s.sel);
     items.forEach(s => s.sel = !all); renderGallery(); return;
   }
-  if(e.target.closest('[data-gdl]')){ const g = groups.find(g => g.id === grp.dataset.gid); downloadStills(stills.filter(s => s.gid === g.id), g.title); return; }
+  if(e.target.closest('[data-gdl]')){ const g = groups.find(g => g.id === grp.dataset.gid); downloadStills(stills.filter(s => s.gid === g.id && inView(s)), g.title); return; }
   if(!tile) return;
   const s = stillById(Number(tile.dataset.id));
   if(e.target.closest('[data-dl]')){ downloadStills([s]); return; }
@@ -2333,9 +2407,9 @@ $('#gGroups').addEventListener('click', e => {
   setSel(s, box.checked, e.shiftKey); renderGallery();
 });
 $('#gSelAll').addEventListener('click', toggleSelectAll);
-$('#gDlSel').addEventListener('click', () => downloadStills(orderedStills().filter(s => s.sel), 'selected'));
-$('#gDlAll').addEventListener('click', () => downloadStills(orderedStills(), 'all'));
-$('#gDel').addEventListener('click', () => deleteStills(stills.filter(s => s.sel)));
+$('#gDlSel').addEventListener('click', () => downloadStills(viewStills().filter(s => s.sel), 'selected'));
+$('#gDlAll').addEventListener('click', () => downloadStills(viewStills(), gView ? gView : 'all'));
+$('#gDel').addEventListener('click', () => deleteStills(viewStills().filter(s => s.sel)));
 document.querySelectorAll('.gsize button').forEach(b => b.addEventListener('click', () => {
   document.querySelectorAll('.gsize button').forEach(x => x.setAttribute('aria-pressed', x === b));
   $('#stillsView').style.setProperty('--tile', b.dataset.size + 'px');
@@ -2383,7 +2457,7 @@ function flushUndo(){
 }
 
 /* ── viewer ── */
-function openLb(id){ lbIndex = orderedStills().findIndex(s => s.id === id); $('#lb').hidden = false; renderLb(); $('#lbClose').focus(); }
+function openLb(id){ lbIndex = viewStills().findIndex(s => s.id === id); $('#lb').hidden = false; renderLb(); $('#lbClose').focus(); }
 function closeLb(){ $('#lb').hidden = true; $('#lbBody').classList.remove('zoom'); }
 function toggleZoom(e){
   const body = $('#lbBody'), img = $('#lbImg'), on = !body.classList.contains('zoom');
@@ -2405,7 +2479,7 @@ $('#lbOrig').addEventListener('pointerdown', () => showBefore(true));
 addEventListener('keyup', e => { if((e.key === 'o' || e.key === 'O') && !$('#lb').hidden) showBefore(false); });
 $('#lbZoom').addEventListener('click', () => toggleZoom());
 function renderLb(){
-  const list = orderedStills();
+  const list = viewStills();
   if(!list.length){ closeLb(); return; }
   lbIndex = clamp(lbIndex, 0, list.length - 1);
   const s = list[lbIndex], g = groups.find(g => g.id === s.gid);
@@ -2419,7 +2493,7 @@ function renderLb(){
   b.textContent = s.sel ? '✓ Selected' : 'Select';
   $('#lbPrev').disabled = lbIndex === 0; $('#lbNext').disabled = lbIndex === list.length - 1;
 }
-const lbStill = () => orderedStills()[lbIndex];
+const lbStill = () => viewStills()[lbIndex];
 function lbStep(d){ lbIndex += d; renderLb(); }
 $('#lbPrev').addEventListener('click', () => lbStep(-1));
 $('#lbNext').addEventListener('click', () => lbStep(1));
@@ -2527,10 +2601,10 @@ $('#aiPromptReset').addEventListener('click', () => { $('#aiPrompt').value = AI_
 $('#aiClose').addEventListener('click', closeAi);
 $('#aiCancel').addEventListener('click', closeAi);
 $('#ai').addEventListener('click', e => { if(e.target === e.currentTarget && !ai.abort) closeAi(); });
-$('#gAi').addEventListener('click', () => openAi(orderedStills().filter(s => s.sel)));
+$('#gAi').addEventListener('click', () => openAi(viewStills().filter(s => s.sel)));
 $('#lbAi').addEventListener('click', () => openAi([lbStill()], true));
 $('#capAi').addEventListener('click', () => {
-  const sel = orderedStills().filter(s => s.sel);
+  const sel = viewStills().filter(s => s.sel);
   if(sel.length){ openAi(sel); return; }
   showTab('stills');
   toast(stills.length ? 'Select the stills to clean, then press Remove captions (AI).' : 'Grab a still first (S or Grab frame), then select it.');
@@ -2887,7 +2961,7 @@ $('#aiGo').addEventListener('click', async () => {
     renderGallery();
     if(made.length && !failed){
       $('#ai').hidden = true;
-      if(ai.fromLb && made.length === 1){ lbIndex = orderedStills().indexOf(made[0]); renderLb(); toast('Captions removed. Hold O to compare with the original.'); }
+      if(ai.fromLb && made.length === 1){ lbIndex = viewStills().indexOf(made[0]); renderLb(); toast('Captions removed. Hold O to compare with the original.'); }
       else toast(`Captions removed from ${made.length} still${made.length === 1 ? '' : 's'}${stopped ? ' (stopped)' : ''}`, $('#stillsView').hidden ? { action: 'View', onAction: () => showTab('stills') } : {});
     } else if(stopped) aiStatus(made.length ? `Stopped. ${made.length} still${made.length === 1 ? '' : 's'} cleaned.` : 'Stopped.');
     else if(failed) aiStatus(`${made.length ? `${made.length} cleaned, ${failed} failed. ` : ''}${lastErr}`, true);
@@ -3298,8 +3372,8 @@ new ResizeObserver(() => { if(!$('#gradeView').hidden) gradeRenderPreview(); }).
 const grFile = $('#grFile');
 for(const id of ['#grUpload', '#grUpload2']) $(id).addEventListener('click', () => grFile.click());
 grFile.addEventListener('change', () => { addGradeFiles([...grFile.files]); grFile.value = ''; });
-for(const id of ['#grFromStills', '#grFromStills2']) $(id).addEventListener('click', () => addStillsToGrade(orderedStills().filter(s => s.sel)));
-$('#gToGrade').addEventListener('click', () => addStillsToGrade(orderedStills().filter(s => s.sel)));
+for(const id of ['#grFromStills', '#grFromStills2']) $(id).addEventListener('click', () => addStillsToGrade(viewStills().filter(s => s.sel)));
+$('#gToGrade').addEventListener('click', () => addStillsToGrade(viewStills().filter(s => s.sel)));
 async function gradedBlob(item){
   let bmp = await createImageBitmap(item.blob);
   let w = bmp.width, h = bmp.height;
