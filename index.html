@@ -239,7 +239,28 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 @keyframes flash{from{opacity:.45}to{opacity:0}}
 
 /* stills gallery */
-.gbar{display:flex;align-items:center;gap:8px;padding:10px 14px;flex-wrap:wrap}
+.gbar{display:flex;align-items:center;gap:8px;padding:10px 14px;min-height:52px}
+.gb-browse,.gb-sel{display:flex;align-items:center;gap:8px;flex:1;min-width:0}
+.gb-browse[hidden],.gb-sel[hidden]{display:none}
+.gb-sel .sp{flex:1}
+.gb-sel .ginfo{margin-right:0;color:var(--text);font-weight:600}
+.gfav{padding:0 9px;gap:5px}
+.gfav span:empty{display:none}
+.gbk{position:relative}
+.gbk .bkdot{position:absolute;right:5px;bottom:6px;width:7px;height:7px;box-shadow:0 0 0 2px var(--bg)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.ib.danger:hover{color:var(--danger)}
+.mwrap{position:relative;flex:none}
+.menu{position:absolute;top:calc(100% + 6px);right:0;z-index:30;min-width:220px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:5px;display:grid;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.menu[hidden]{display:none}
+.menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}
+.mi{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:5px;padding:8px 10px;font-size:12.5px;color:var(--text);cursor:pointer;white-space:nowrap}
+.mi:hover:not(:disabled),.mi:focus-visible{background:var(--panel-2);outline:none}
+.mi:disabled{opacity:.4;cursor:default}
+.mi.danger{color:var(--danger)}
+.mi small{margin-left:auto;color:var(--faint);font:500 11px var(--mono)}
+.chev{width:14px;height:14px;margin-left:-2px;opacity:.7}
+@media (max-width:700px){ .gbar,.gb-browse,.gb-sel{flex-wrap:wrap} }
 .btn.magic{background:var(--panel-2);border-color:var(--line);color:var(--text)}
 .btn.magic:hover:not(:disabled){background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .btn.magic svg.i{fill:currentColor;stroke:none}
@@ -258,9 +279,9 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .bm-row input[type=number]:focus{border-color:var(--accent);outline:none}
 .bm .seg{min-width:240px}
 .bm .bm-prog{display:grid;gap:6px}
-.ginfo{font-size:12.5px;color:var(--muted);margin-right:auto;min-width:0}
+.ginfo{font-size:12.5px;color:var(--muted);margin-right:auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ginfo b{color:var(--text);font-weight:600}
-.gfolder{max-width:260px;min-width:0;height:32px}
+.gfolder{width:auto;max-width:220px;min-width:0;height:32px;flex:none}
 .gsize{display:flex;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);padding:2px;gap:2px}
 .gsize button{width:28px;height:26px;border:0;border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center}
 .gsize button[aria-pressed="true"]{background:var(--raised);color:var(--text)}
@@ -286,8 +307,8 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .tchk input{width:15px;height:15px;accent-color:var(--accent);cursor:pointer}
 .tfav{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#EDEDED;display:grid;place-items:center;cursor:pointer;opacity:0;transition:opacity .15s}
 .tile:hover .tfav,.tfav:focus-visible,.tfav.on{opacity:1}
-.tfav.on,.btn.fav-on,.cmp-cell .ib.on{color:#FF5C7A}
-.tfav.on svg,.btn.fav-on svg,#gFav[aria-pressed="true"] svg,.cmp-cell .ib.on svg{fill:currentColor}
+.tfav.on,.btn.fav-on,.cmp-cell .ib.on,#lbFav.on{color:#FF5C7A}
+.tfav.on svg,.btn.fav-on svg,#lbFav.on svg,#gFav[aria-pressed="true"] svg,.cmp-cell .ib.on svg{fill:currentColor}
 #gFav[aria-pressed="true"]{border-color:var(--text);color:var(--text)}
 /* compare */
 .cmp{position:fixed;inset:0;z-index:55;background:rgba(6,7,9,.98);display:grid;grid-template-rows:auto minmax(0,1fr)}
@@ -309,7 +330,7 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 
 /* lightbox */
 .lb{position:fixed;inset:0;z-index:50;background:rgba(6,7,9,.98);display:grid;grid-template-rows:auto minmax(0,1fr)}
-.lb-top{display:flex;align-items:center;gap:8px;padding:10px 14px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.lb-top{display:flex;align-items:center;gap:8px;position:relative;z-index:3;padding:10px 14px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 .lb-title{margin-right:auto;min-width:0;display:grid}
 .lb-title b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lb-title span{font-size:11.5px;color:var(--faint)}
@@ -679,25 +700,43 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 
     <div class="view" id="stillsView" role="tabpanel" aria-labelledby="tabStills" hidden>
       <div class="gbar">
-        <select class="sel gfolder" id="gFolder" aria-label="Folder" title="Each video's stills are kept in their own folder. All videos shows every still."></select>
-        <button class="btn ghost" id="gFav" aria-pressed="false" title="Show only favourites (mark them with the heart, or F in the viewer)"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg><span id="gFavTxt">Favourites</span></button>
-        <span class="ginfo" id="gInfo">No stills yet</span>
+        <div class="gb-browse" id="gBrowse">
+          <select class="sel gfolder" id="gFolder" aria-label="Folder"></select>
+          <button class="btn ghost gfav" id="gFav" aria-pressed="false" aria-label="Show only favourites" title="Show only favourites (mark them with the heart, or F in the viewer)"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg><span class="num" id="gFavTxt"></span></button>
+          <span class="ginfo" id="gInfo">No stills yet</span>
         <div class="gsize" role="group" aria-label="Thumbnail size">
           <button data-size="130" aria-pressed="false" title="Small thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="4" height="4" rx="1"/><rect x="6" y="1" width="4" height="4" rx="1"/><rect x="11" y="1" width="4" height="4" rx="1"/><rect x="1" y="6" width="4" height="4" rx="1"/><rect x="6" y="6" width="4" height="4" rx="1"/><rect x="11" y="6" width="4" height="4" rx="1"/><rect x="1" y="11" width="4" height="4" rx="1"/><rect x="6" y="11" width="4" height="4" rx="1"/><rect x="11" y="11" width="4" height="4" rx="1"/></svg></button>
           <button data-size="190" aria-pressed="true" title="Medium thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="1" width="6.5" height="6.5" rx="1"/><rect x="1" y="8.5" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="8.5" width="6.5" height="6.5" rx="1"/></svg></button>
           <button data-size="300" aria-pressed="false" title="Large thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg></button>
         </div>
-        <button class="btn ghost" id="gCmp" disabled title="Compare 2–4 selected stills side by side">Compare</button>
-        <button class="btn ghost" id="gAi" disabled title="Remove captions from the selected stills: free on this computer, or with Nano Banana">Remove captions (AI)</button>
-        <button class="btn ghost" id="gUp" disabled title="Make the selected stills 2× or 4× bigger and sharper (free, on this computer)">Upscale</button>
-        <button class="btn ghost" id="gToGrade" disabled title="Copy the selected stills into the Grade tab">Grade selected</button>
-        <button class="btn ghost" id="gBk" title="Save every still to a folder on your computer, or restore from one"><span class="bkdot" id="gBkDot"></span><span id="gBkTxt">Backup</span></button>
-        <button class="btn ghost" id="gSelAll" disabled>Select all</button>
-        <button class="btn danger-ghost" id="gDel" disabled>Delete</button>
-        <button class="btn danger-ghost" id="gClear" disabled title="Remove every still in this folder (or all folders), with Undo">Clear</button>
-        <button class="btn ghost" id="gDlAll" disabled>Download all</button>
-        <button class="btn" id="gDlSel" disabled>
-          <svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg><span id="gDlSelTxt">Download selected</span></button>
+          <button class="ib gbk" id="gBk" aria-label="Backup" title="Backup"><svg class="i" viewBox="0 0 24 24"><path d="M7 18.5a4.5 4.5 0 0 1-.6-9A6 6 0 0 1 17.8 9a4.75 4.75 0 0 1-.3 9.5z"/></svg><span class="bkdot" id="gBkDot"></span><span class="vh" id="gBkTxt">Backup</span></button>
+          <div class="mwrap">
+            <button class="ib" id="gMore" aria-haspopup="menu" aria-expanded="false" aria-label="More" title="More"><svg class="i" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></button>
+            <div class="menu" id="gMoreMenu" role="menu" hidden>
+              <button class="mi" id="gSelAll" role="menuitem" disabled>Select all <small>A</small></button>
+              <button class="mi" id="gDlAll" role="menuitem" disabled>Download all (ZIP)</button>
+              <hr>
+              <button class="mi danger" id="gClear" role="menuitem" disabled title="Remove every still in this folder (or all folders), with Undo">Clear folder</button>
+            </div>
+          </div>
+        </div>
+        <div class="gb-sel" id="gSelBar" hidden>
+          <button class="ib" id="gSelX" aria-label="Clear selection" title="Clear selection (Esc)"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+          <span class="ginfo" id="gSelN"></span>
+          <button class="lnk" id="gSelAll2">Select all</button>
+          <span class="sp"></span>
+          <button class="btn ghost" id="gCmp" hidden title="Compare the selected stills side by side">Compare</button>
+          <div class="mwrap">
+            <button class="btn ghost" id="gEdit" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg>Edit<svg class="i chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
+            <div class="menu" id="gEditMenu" role="menu" hidden>
+              <button class="mi" id="gAi" role="menuitem">Remove captions (AI)</button>
+              <button class="mi" id="gUp" role="menuitem">Upscale 2× / 4×</button>
+              <button class="mi" id="gToGrade" role="menuitem">Colour grade</button>
+            </div>
+          </div>
+          <button class="ib danger" id="gDel" aria-label="Delete selected" title="Delete selected (Delete)"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></svg></button>
+          <button class="btn" id="gDlSel"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg><span id="gDlSelTxt">Download</span></button>
+        </div>
       </div>
       <div class="gscroll" id="gScroll">
         <div class="gempty" id="gEmpty">
@@ -921,14 +960,20 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-labelledby="lbTitle" hidden>
   <div class="lb-top">
     <div class="lb-title"><b id="lbTitle"></b><span class="num" id="lbMeta"></span></div>
-    <button class="btn ghost" id="lbFav" title="Favourite (F)"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg><span>Favourite</span></button>
+    <button class="btn ghost" id="lbOrig" hidden title="Hold to see the still before it was changed (O)">Hold: before</button>
+    <button class="ib" id="lbFav" aria-label="Favourite" title="Favourite (F)"><svg class="i" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.2a4.3 4.3 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/></svg></button>
     <button class="btn ghost" id="lbSel" title="Select (X)">Select</button>
-    <button class="btn ghost" id="lbOrig" hidden title="Hold to see the still before captions were removed (O)">Hold: before</button>
-    <button class="btn ghost" id="lbAi" title="Remove captions from this still (R)">Remove captions (AI)</button>
-    <button class="btn ghost" id="lbUp" title="Make this still 2× or 4× bigger and sharper (U)">Upscale</button>
     <button class="btn ghost" id="lbZoom" title="Toggle fit / actual size (Z)">100%</button>
-    <button class="btn ghost" id="lbJump" title="Show this moment on the Video tab">Show in video</button>
-    <button class="btn danger-ghost" id="lbDel">Delete</button>
+    <div class="mwrap">
+      <button class="btn ghost" id="lbEdit" aria-haspopup="menu" aria-expanded="false"><svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/></svg>Edit<svg class="i chev" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
+      <div class="menu" id="lbEditMenu" role="menu" hidden>
+        <button class="mi" id="lbAi" role="menuitem">Remove captions (AI) <small>R</small></button>
+        <button class="mi" id="lbUp" role="menuitem">Upscale 2× / 4× <small>U</small></button>
+        <hr>
+        <button class="mi" id="lbJump" role="menuitem">Show in video</button>
+      </div>
+    </div>
+    <button class="ib danger" id="lbDel" aria-label="Delete" title="Delete this still"><svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12M10 11v5M14 11v5"/></svg></button>
     <button class="btn" id="lbDl"><svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>Download</button>
     <button class="ib" id="lbClose" title="Close (Esc)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
   </div>
@@ -1529,6 +1574,7 @@ document.addEventListener('keydown', e => {
   if(!$('#stillsView').hidden){
     if(k === 'a' || k === 'A'){ e.preventDefault(); toggleSelectAll(); }
     else if(k === 'Delete'){ deleteStills(viewStills().filter(s => s.sel)); }
+    else if(k === 'Escape' && stills.some(s => s.sel)){ stills.forEach(s => s.sel = false); renderGallery(); }
     return;
   }
   if(!state.duration) return;
@@ -2521,11 +2567,15 @@ function renderFolders(){
   const seen = new Map();
   $('#gFolder').innerHTML = `<option value="">All videos (${stills.length})</option>` + keys.map(k => {
     const n = names.get(k) || 'Video', dup = (seen.get(n) || 0) + 1; seen.set(n, dup);
-    return `<option value="${esc(k)}">${esc(n)}${dup > 1 ? ` (${dup})` : ''}${k === cur ? ' · open now' : ''} (${counts.get(k)})</option>`;
+    const short = n.length > 26 ? n.slice(0, 25).trim() + '…' : n;
+    return `<option value="${esc(k)}" title="${esc(n)}">${esc(short)}${dup > 1 ? ` (${dup})` : ''}${k === cur ? ' · open now' : ''} (${counts.get(k)})</option>`;
   }).join('');
   $('#gFolder').value = gView;
+  folderNames = names;
+  $('#gFolder').title = gView ? `${names.get(gView) || ''}\nEach video's stills are kept in their own folder.` : 'All videos: every still you have grabbed';
 }
-const folderLabel = () => { const o = $('#gFolder').selectedOptions[0]; return o ? o.text.replace(/ · open now| \(\d+\)$/g, '').replace(/ \(\d+\)$/, '') : ''; };
+var folderNames = new Map(); // var: renderFolders can run before this line during start-up
+const folderLabel = () => gView ? (folderNames.get(gView) || '') : '';
 $('#gFolder').addEventListener('change', e => setFolder(e.target.value));
 const ICON_DL = '<svg class="i" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></svg>';
 const stillMeta = s => ({ id:s.id, gid:s.gid, w:s.w, h:s.h, t:s.t, sel:s.sel, ext:s.ext, base:s.base, vid:s.vid || null, fav:!!s.fav });
@@ -2541,7 +2591,7 @@ function renderGallery(){
   saveStillsMeta();
   renderFolders();
   const favN = stills.filter(s => s.fav && inFolder(s)).length;
-  $('#gFav').setAttribute('aria-pressed', favOnly); $('#gFavTxt').textContent = favN ? `Favourites (${favN})` : 'Favourites';
+  $('#gFav').setAttribute('aria-pressed', favOnly); $('#gFavTxt').textContent = favN || '';
   const vis = viewStills(), n = vis.length, sel = vis.filter(s => s.sel).length, other = stills.length - stills.filter(inFolder).length;
   const badge = $('#stillCount'); badge.hidden = !n; badge.textContent = n;
   $('#gInfo').innerHTML = (n ? `<b class="num">${n}</b> still${n === 1 ? '' : 's'}${sel ? ` · <b class="num">${sel}</b> selected` : ''}`
@@ -2549,16 +2599,17 @@ function renderGallery(){
   $('#gEmpty').hidden = n > 0;
   $('#gSelAll').disabled = $('#gDlAll').disabled = !n;
   $('#gClear').disabled = !(gView ? stills.some(inFolder) : stills.length);
-  $('#gClear').textContent = gView ? 'Clear folder' : 'Clear all';
-  $('#gToGrade').disabled = $('#gAi').disabled = $('#gUp').disabled = !sel;
-  $('#gCmp').disabled = sel < 2 || sel > 4;
-  $('#gCmp').textContent = sel >= 2 && sel <= 4 ? `Compare ${sel}` : 'Compare';
-  $('#gToGrade').textContent = sel ? `Grade ${sel}` : 'Grade selected';
+  $('#gClear').textContent = gView ? 'Clear this folder…' : 'Clear all stills…';
+  // two bars: browsing, or acting on a selection
+  $('#gBrowse').hidden = sel > 0; $('#gSelBar').hidden = !sel;
+  $('#gSelN').textContent = `${sel} selected`;
+  $('#gSelAll2').hidden = sel === n; $('#gSelAll2').textContent = `Select all ${n}`;
+  $('#gCmp').hidden = sel < 2 || sel > 4;
+  $('#gDel').title = `Delete ${sel} still${sel === 1 ? '' : 's'} (Delete)`;
+  $('#gDlSelTxt').textContent = sel > 1 ? `Download ${sel}` : 'Download';
+  $('#gDlSel').title = sel > 1 ? 'Downloads as a ZIP' : '';
+  if(!sel) closeMenus();
   syncBm();
-  $('#gSelAll').textContent = n && sel === n ? 'Clear selection' : 'Select all';
-  $('#gDlSel').disabled = $('#gDel').disabled = !sel;
-  $('#gDlSelTxt').textContent = sel > 1 ? `Download ${sel} (ZIP)` : sel === 1 ? 'Download 1' : 'Download selected';
-  $('#gDel').textContent = sel ? `Delete ${sel}` : 'Delete';
   $('#gGroups').classList.toggle('has-sel', sel > 0);
   $('#gGroups').innerHTML = groups.slice().reverse().map(g => {
     const items = stills.filter(s => s.gid === g.id && inView(s));
@@ -2608,7 +2659,20 @@ $('#gGroups').addEventListener('click', e => {
   const s = stillById(Number(box.closest('.tile').dataset.id));
   setSel(s, box.checked, e.shiftKey); renderGallery();
 });
-$('#gSelAll').addEventListener('click', toggleSelectAll);
+$('#gSelAll').addEventListener('click', () => { closeMenus(); toggleSelectAll(); });
+$('#gSelAll2').addEventListener('click', () => { viewStills().forEach(s => s.sel = true); renderGallery(); });
+$('#gSelX').addEventListener('click', () => { stills.forEach(s => s.sel = false); renderGallery(); });
+/* drop-down menus: one open at a time; outside click, Esc or picking an item closes them */
+function closeMenus(){ document.querySelectorAll('.menu').forEach(m => { m.hidden = true; m.previousElementSibling?.setAttribute('aria-expanded', false); }); }
+document.querySelectorAll('.mwrap > button').forEach(b => b.addEventListener('click', e => {
+  e.stopPropagation();
+  const m = b.nextElementSibling, open = m.hidden;
+  closeMenus(); m.hidden = !open; b.setAttribute('aria-expanded', open);
+  if(open) m.querySelector('.mi:not(:disabled)')?.focus();
+}));
+document.querySelectorAll('.menu').forEach(m => m.addEventListener('click', e => { if(e.target.closest('.mi')) closeMenus(); }));
+document.addEventListener('click', e => { if(!e.target.closest('.menu')) closeMenus(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape' && [...document.querySelectorAll('.menu')].some(m => !m.hidden)){ closeMenus(); e.stopImmediatePropagation(); } }, true);
 $('#gDlSel').addEventListener('click', () => downloadStills(viewStills().filter(s => s.sel), 'selected'));
 $('#gDlAll').addEventListener('click', () => downloadStills(viewStills(), gView ? folderLabel() : 'all'));
 $('#gDel').addEventListener('click', () => deleteStills(viewStills().filter(s => s.sel)));
@@ -2680,6 +2744,7 @@ function bkUI(){
   const n = stills.filter(s => !bk.done.has(s.id)).length;
   const dot = $('#gBkDot'); dot.className = 'bkdot' + (bk.state === 'on' ? ' on' : bk.state === 'paused' ? ' warn' : '');
   $('#gBkTxt').textContent = bk.state === 'on' ? (bk.busy ? 'Saving…' : 'Backed up') : bk.state === 'paused' ? 'Backup paused' : 'Backup';
+  $('#gBk').title = bk.state === 'on' ? `Backup: on, saving to “${bk.dir.name}”` : bk.state === 'paused' ? 'Backup paused: click to resume' : 'Backup: save every still to a folder on your computer';
   $('#bkPick').textContent = bk.dir ? 'Choose a different folder' : 'Choose folder';
   $('#bkNow').hidden = !bk.dir; $('#bkStop').hidden = !bk.dir;
   $('#bkNow').textContent = bk.state === 'paused' ? 'Allow and resume' : 'Save now';
@@ -2881,7 +2946,7 @@ function renderLb(){
   $('#lbImg').alt = `Still at ${fmt(s.t)}`;
   $('#lbTitle').textContent = `${g?.title || 'Still'} · ${fmt(s.t)}`;
   $('#lbMeta').textContent = `${lbIndex + 1} of ${list.length} · ${s.w}×${s.h} · ${s.ext.toUpperCase()} · ${fmtBytes(s.blob.size)}`;
-  $('#lbFav').classList.toggle('fav-on', !!s.fav); $('#lbFav').setAttribute('aria-pressed', !!s.fav);
+  $('#lbFav').classList.toggle('on', !!s.fav); $('#lbFav').setAttribute('aria-pressed', !!s.fav);
   const b = $('#lbSel'); b.classList.toggle('picked', s.sel); b.classList.toggle('ghost', !s.sel);
   b.textContent = s.sel ? '✓ Selected' : 'Select';
   $('#lbPrev').disabled = lbIndex === 0; $('#lbNext').disabled = lbIndex === list.length - 1;

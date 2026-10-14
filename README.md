@@ -25,7 +25,7 @@ Grab full-resolution images from your video and browse them in the **Stills** ta
   - **Random** grabs that many random moments, skipping black, blank, blurry or badly exposed frames. Select the ones you like and press **Shuffle again**: your selected ones stay and the rest are swapped for new moments.
   - **Best moments** picks the best few frames for you, from the whole video or just the ticked clips. It samples up to a few hundred frames, scores each for sharpness, steadiness, exposure, contrast and colour, keeps only the top-scoring ones, spreads them out in time and saves them full size in a "Best moments" group.
 - Drag the inner edge of the Clips or Export panel to make it wider or narrower, or the top edge of the timeline to make it taller or shorter (double-click an edge to reset). Sizes are remembered.
-- **Folders:** every still is kept in a folder for the video it came from. Pick a folder, or **All videos** to see everything, from the menu at the top of the Stills tab. Opening a new video switches to its folder, so stills from earlier videos stay out of the way (they aren't deleted). Select all, Download all and Delete work on the folder you're looking at. **Clear folder** removes every still in the folder you're viewing (**Clear all** when you're on All videos), after asking, with Undo for a few seconds; an emptied folder disappears from the list.
+- **Folders:** every still is kept in a folder for the video it came from. Pick a folder, or **All videos** to see everything, from the menu at the top of the Stills tab. Opening a new video switches to its folder, so stills from earlier videos stay out of the way (they aren't deleted). Select all, Download all and Delete work on the folder you're looking at. **Clear this folder…** in the **⋯** menu removes every still in the folder you're viewing (**Clear all stills…** when you're on All videos), after asking, with Undo for a few seconds; an emptied folder disappears from the list.
 - Hide or show the Clips panel with the button next to the name (or **[**). Export settings open from **Export** in the top bar (or **]**). The **?** button lists every keyboard shortcut.
 - **Hide timeline** (or **T**) gives the video or the gallery the full height.
 - To grab many at once, tick clips, choose **Stills** under Export as, and pick either a set number per clip or a number per second (up to every frame). Choose PNG (lossless, the default) or JPEG (97% quality, smaller). **Pick the sharpest nearby frame** (on by default) checks up to 3 frames either side of each moment and keeps the least blurry one.
@@ -36,7 +36,7 @@ Grab full-resolution images from your video and browse them in the **Stills** ta
 
 Give a set of images the same colour grade.
 
-- Add stills (select them in the Stills tab and press **Grade**) or upload your own photos with **Upload images**, or drop image files onto the page.
+- Add stills (select them in the Stills tab and choose **Edit → Colour grade**) or upload your own photos with **Upload images**, or drop image files onto the page.
 - Start from a preset (Clean, Warm, Cool, Bright & airy, Moody, Film, Black & white) and adjust Light (exposure, contrast, highlights, shadows, whites, blacks), Colour (temperature, tint, vibrance, saturation), Split toning and Effects (fade, vignette, grain, sharpen). Double-click a slider's name to reset it.
 - The look applies to every image in the set, including ones you add later. Hold **Hold to compare** (or **\\**) to see the original.
 - **Even out exposure first** brings each image to a similar brightness before the look, which helps mixed lighting match.
@@ -51,22 +51,26 @@ Press **Transcript** in the top bar (or **J**), pick an engine and press **Trans
 - **Gemini:** uses your Gemini API key (the same one as Nano Banana). Usually more accurate with names and punctuation, and can label who's speaking. Gemini 3.8 Flash and 3.5 Flash-Lite are on Google's Free tier, within its daily limits. The audio is sent to Google.
 - The audio is taken from the video by the video engine and sent in blocks (2 minutes for Whisper, 5 for Gemini) split at quiet moments.
 
+**Stills tab toolbar**
+
+When nothing is selected the bar shows browsing tools: the folder menu, the Favourites heart, thumbnail size, the Backup cloud (its dot is green when backing up, amber when paused) and **⋯** (Select all, Download all, Clear folder). Select any still and it switches to a selection bar: **✕** (or Esc) to clear the selection, **Select all**, **Compare** (with 2–4 selected), **Edit** (Remove captions, Upscale, Colour grade), the bin to delete, and **Download**. The viewer works the same way, with Remove captions, Upscale and Show in video under **Edit**.
+
 **Favourites and Compare**
 
-- Click the heart on a still (or press **F** in the viewer) to mark a favourite. **Favourites** at the top of the Stills tab shows only those.
+- Click the heart on a still (or press **F** in the viewer) to mark a favourite. The heart button at the top of the Stills tab shows only those.
 - Select 2–4 stills and press **Compare** to see them side by side. Click any picture to zoom all of them to 100% on the same spot (they scroll together), press **1–4** to mark favourites, then **Keep favourites only** deletes the rest (with Undo).
 
 **Upscale**
 
-Select stills and press **Upscale** (or **U** in the viewer), then pick 2× or 4×. It runs free in your browser with [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (`realesr-general-x4v3`, BSD-3-Clause; the 5 MB model is in `models/`), which sharpens edges and cleans up video compression as it enlarges. Each upscaled still is saved as a new still in an "Upscaled" group. It uses the graphics card when it can; on the processor a 1080p still takes a few minutes. 4× is turned off when the result would be over 50 megapixels.
+Select stills and choose **Edit → Upscale** (or **U** in the viewer), then pick 2× or 4×. It runs free in your browser with [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) (`realesr-general-x4v3`, BSD-3-Clause; the 5 MB model is in `models/`), which sharpens edges and cleans up video compression as it enlarges. Each upscaled still is saved as a new still in an "Upscaled" group. It uses the graphics card when it can; on the processor a 1080p still takes a few minutes. 4× is turned off when the result would be over 50 megapixels.
 
 **Backup**
 
-Stills are kept in this browser's storage, which is lost if you clear site data. Press **Backup** in the Stills tab and **Choose folder** (Chrome and Edge): every still is then saved there as a normal image file as soon as you grab it, in a subfolder per video. Choose a folder inside Google Drive, Dropbox or OneDrive on your computer to have it in the cloud too. After a browser restart Chrome may ask for permission again; the button shows **Backup paused** until you press **Allow and resume**. **Import from a folder…** brings stills back (for example on a new computer), skipping ones you already have.
+Stills are kept in this browser's storage, which is lost if you clear site data. Press the cloud button at the top of the Stills tab and **Choose folder** (Chrome and Edge): every still is then saved there as a normal image file as soon as you grab it, in a subfolder per video. Choose a folder inside Google Drive, Dropbox or OneDrive on your computer to have it in the cloud too. After a browser restart Chrome may ask for permission again; the cloud button's dot turns amber (Backup paused) until you press **Allow and resume**. **Import from a folder…** brings stills back (for example on a new computer), skipping ones you already have.
 
 **Remove captions (AI)**
 
-Select stills and press **Remove captions (AI)** in the Stills tab or in the Stills card on the left, or press it (or **R**) in the viewer. Drag a box around the captions, then pick an engine. Each cleaned still is saved as a new still in a "Captions removed" group and the original stays; hold **Hold: before** (or **O**) in the viewer to compare.
+Select stills and choose **Edit → Remove captions (AI)** in the Stills tab, use **Remove captions (AI)** in the Stills card on the left, or **Edit → Remove captions (AI)** (or **R**) in the viewer. Drag a box around the captions, then pick an engine. Each cleaned still is saved as a new still in a "Captions removed" group and the original stays; hold **Hold: before** (or **O**) in the viewer to compare.
 
 - **Free · this computer** (default) uses [LaMa](https://github.com/advimman/lama), an open-source inpainting model (Apache-2.0), running in your browser with [ONNX Runtime Web](https://onnxruntime.ai/). Nothing is uploaded and there's no key or cost.
   - **Letters only** finds the light caption letters in the box, with their outline, and fills just those. Best for white or yellow captions.
