@@ -139,19 +139,10 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
    box; object-fit then letterboxes the whole frame into it. */
 .stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
 .cropzone{position:absolute;overflow:hidden;pointer-events:none}
-/* caption area */
-.capzone{position:absolute;pointer-events:none;z-index:2}
-.capzone.edit{pointer-events:auto;cursor:crosshair;background:rgba(0,0,0,.35)}
+/* caption area box (AI window) */
 .capbox{position:absolute;border:1.5px dashed var(--text);border-radius:3px;pointer-events:none}
-.capzone.edit .capbox{border-style:solid;background:rgba(255,255,255,.08);box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
 .capbox .tag{position:absolute;left:0;top:-22px;font:600 10.5px var(--ui);background:var(--text);color:var(--bg);padding:2px 8px;border-radius:10px;white-space:nowrap}
-.caphint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.75);color:#EDEDED;
-  padding:6px 8px 6px 12px;border-radius:8px;font-size:12px;white-space:nowrap}
-.caphint .btn{height:26px;padding:0 10px;font-size:11.5px}
-.caprow{display:flex;align-items:center;gap:8px}
-.caprow .chk{flex:1}
-.caprow .btn{height:26px;padding:0 10px;font-size:11.5px}
-#capAi{height:28px;font-size:11.5px;padding:0 10px}
+#capAi{height:30px;font-size:12px;padding:0 10px}
 .cropframe{position:absolute;border:2px solid var(--clip);box-shadow:0 0 0 9999px rgba(0,0,0,.6);pointer-events:auto;touch-action:none;border-radius:2px}
 .cropframe.drag-x{cursor:ew-resize}
 .cropframe.drag-y{cursor:ns-resize}
@@ -557,11 +548,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <label><input type="radio" name="sfmt" value="jpg" id="sfJpg"><span>JPEG · smaller</span></label>
       </div>
       <label class="chk" title="Checks up to 3 frames either side of each moment and keeps the least blurry"><input type="checkbox" id="sharpest" checked> Pick the sharpest nearby frame</label>
-      <div class="caprow">
-        <label class="chk" title="Fills burned-in caption text from nearby frames, then from the surroundings"><input type="checkbox" id="capOn"> Remove captions</label>
-        <button class="btn ghost" id="capSet" title="Draw the area where captions appear">Set area</button>
-      </div>
-      <button class="btn ghost" id="capAi" title="Remove captions from the selected stills with Nano Banana (Google Gemini)">Remove captions with AI (Nano Banana)</button>
+      <button class="btn ghost" id="capAi" title="Remove captions from the selected stills with Nano Banana (Google Gemini)">Remove captions (Nano Banana AI)</button>
       <span class="sub" id="sqDesc" hidden></span>
       <div class="auto-btns">
         <button class="btn magic" id="bmGo" disabled title="Score frames and keep the best few"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Best moments</button>
@@ -591,8 +578,6 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     <div class="view" id="videoView" role="tabpanel" aria-labelledby="tabVideo">
     <div class="stage" id="stage">
       <video id="video" playsinline preload="auto"></video>
-      <div class="capzone" id="capZone" hidden><div class="capbox" id="capBox"><span class="tag">Captions</span></div>
-        <div class="caphint" id="capHint" hidden>Drag a box around where captions appear<button class="btn" id="capDone">Done</button></div></div>
       <div class="cropzone" id="cropZone" hidden><div class="cropframe" id="cropFrame"><span class="tag" id="cropTag"></span></div></div>
       <span class="over-badge num" id="clipBadge" hidden></span>
       <div class="vid-error" id="vidError" hidden>This browser can’t preview this video’s format. It’s often iPhone HEVC footage in Chrome on Windows. Try Safari, or set the iPhone camera format to “Most Compatible”.</div>
@@ -1043,7 +1028,7 @@ video.addEventListener('loadedmetadata', () => {
   state.duration = video.duration;
   $('#tDur').textContent = fmt(state.duration);
   $('#tlEmpty').hidden = true; $('#playhead').hidden = false;
-  layoutTimeline(); renderClips(); buildFilmstrip(); detectFps(); loadCapBox();
+  layoutTimeline(); renderClips(); buildFilmstrip(); detectFps();
 });
 video.addEventListener('error', () => { if(state.url) $('#vidError').hidden = false; });
 
@@ -1873,163 +1858,8 @@ async function captureVideo(){
   return capVid = v;
 }
 
-/* ══ Caption removal ═══════════════════════════════════════════════
-   For burned-in, word-by-word captions on a mostly still shot. Inside the
-   marked area: compare this frame with ~12 frames from the 2 seconds around
-   it, find pixels that are suddenly much brighter than usual (caption text,
-   plus a small margin for edges and shadow), and replace just those with
-   what nearby frames show there when no letter covers them. Anything still
-   uncovered is filled inward from the surrounding pixels. */
-const cap = { box: null, on: false, edit: false };
-const capKey = () => state.file ? `stills-capbox:${state.file.name}:${state.file.size}` : null;
-function loadCapBox(){
-  try{ cap.box = JSON.parse(localStorage.getItem(capKey()) || localStorage.getItem('stills-capbox') || 'null'); }catch(e){ cap.box = null; }
-  try{ cap.on = localStorage.getItem('stills-capon') === '1' && !!cap.box; }catch(e){}
-  syncCapUI();
-}
-function saveCapBox(){
-  try{ const v = JSON.stringify(cap.box); localStorage.setItem(capKey(), v); localStorage.setItem('stills-capbox', v); }catch(e){}
-}
-function syncCapUI(){
-  $('#capOn').checked = cap.on; $('#capOn').disabled = !state.duration;
-  $('#capSet').textContent = cap.box ? 'Edit area' : 'Set area'; $('#capSet').disabled = !state.duration;
-  layoutCap();
-}
-function videoRect(){ // where the picture sits inside the stage
-  const stage = $('#stage'), w = video.videoWidth, h = video.videoHeight, sw = stage.clientWidth, sh = stage.clientHeight;
-  const k = Math.min(sw / w, sh / h); return { x: (sw - w*k) / 2, y: (sh - h*k) / 2, w: w*k, h: h*k };
-}
-function layoutCap(){
-  const zone = $('#capZone'), show = !!video.videoWidth && (cap.edit || (cap.on && cap.box));
-  zone.hidden = !show; zone.classList.toggle('edit', cap.edit); $('#capHint').hidden = !cap.edit;
-  if(!show) return;
-  const r = videoRect();
-  Object.assign(zone.style, { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' });
-  const b = cap.box, el = $('#capBox');
-  el.hidden = !b;
-  if(b) Object.assign(el.style, { left: b.x * r.w + 'px', top: b.y * r.h + 'px', width: b.w * r.w + 'px', height: b.h * r.h + 'px' });
-}
-new ResizeObserver(layoutCap).observe($('#stage'));
-function setCapEdit(on){
-  if(on){ showTab('video'); video.pause(); }
-  cap.edit = on; layoutCap();
-  if(!on && cap.box){ cap.on = true; try{ localStorage.setItem('stills-capon', '1'); }catch(e){} syncCapUI(); toast('Captions will be removed from new stills'); }
-}
-$('#capSet').addEventListener('click', () => setCapEdit(!cap.edit));
-$('#capDone').addEventListener('click', e => { e.stopPropagation(); setCapEdit(false); });
-$('#capOn').addEventListener('change', e => {
-  if(e.target.checked && !cap.box){ e.target.checked = false; setCapEdit(true); return; }
-  cap.on = e.target.checked; try{ localStorage.setItem('stills-capon', cap.on ? '1' : '0'); }catch(err){} layoutCap();
-});
-let capDrag = null;
-$('#capZone').addEventListener('pointerdown', e => {
-  if(!cap.edit || e.target.closest('.caphint')) return;
-  const r = $('#capZone').getBoundingClientRect();
-  capDrag = { x0: (e.clientX - r.left) / r.width, y0: (e.clientY - r.top) / r.height };
-  $('#capZone').setPointerCapture(e.pointerId); e.preventDefault();
-});
-$('#capZone').addEventListener('pointermove', e => {
-  if(!capDrag) return;
-  const r = $('#capZone').getBoundingClientRect();
-  const x1 = clamp((e.clientX - r.left) / r.width, 0, 1), y1 = clamp((e.clientY - r.top) / r.height, 0, 1);
-  cap.box = { x: Math.min(capDrag.x0, x1), y: Math.min(capDrag.y0, y1), w: Math.abs(x1 - capDrag.x0), h: Math.abs(y1 - capDrag.y0) };
-  layoutCap();
-});
-$('#capZone').addEventListener('pointerup', () => {
-  if(!capDrag) return; capDrag = null;
-  if(cap.box && (cap.box.w < 0.02 || cap.box.h < 0.02)) cap.box = null;
-  if(cap.box) saveCapBox(); syncCapUI();
-});
-syncCapUI();
-
-/* Grab the marked area (plus a margin) from the video's current frame. */
-function grabBox(v, bx){
-  const c = document.createElement('canvas'); c.width = bx.w; c.height = bx.h;
-  const x = c.getContext('2d', { willReadFrequently: true });
-  x.drawImage(v, bx.x, bx.y, bx.w, bx.h, 0, 0, bx.w, bx.h);
-  return x.getImageData(0, 0, bx.w, bx.h);
-}
-/* Seeks v around t, then leaves it on t. Returns a full-size canvas of the
-   frame at t with the captions removed (or null when there's nothing to do). */
-async function cleanCaptions(v, t){
-  if(!cap.box) return null;
-  const W = v.videoWidth, H = v.videoHeight, pad = Math.round(Math.max(W, H) * 0.01);
-  const bx = { x: Math.max(0, Math.floor(cap.box.x * W) - pad), y: Math.max(0, Math.floor(cap.box.y * H) - pad) };
-  bx.w = Math.min(W - bx.x, Math.ceil(cap.box.w * W) + 2 * pad); bx.h = Math.min(H - bx.y, Math.ceil(cap.box.h * H) + 2 * pad);
-  const n = bx.w * bx.h;
-  // neighbouring moments, nearest first
-  const offs = [0.2, -0.2, 0.45, -0.45, 0.75, -0.75, 1.1, -1.1, 1.6, -1.6, 2.2, -2.2, 3.0, -3.0, 4.0, -4.0];
-  const frames = [];
-  for(const d of offs){
-    const tt = t + d; if(tt < 0 || tt > state.duration - 0.02) continue;
-    v.currentTime = tt; await once(v, 'seeked', 10000); frames.push({ d: Math.abs(d), px: grabBox(v, bx).data });
-  }
-  v.currentTime = t; await once(v, 'seeked', 10000);
-  const full = document.createElement('canvas'); full.width = W; full.height = H;
-  const fx = full.getContext('2d', { alpha: false, willReadFrequently: true }); fx.drawImage(v, 0, 0);
-  if(frames.length < 3) return full;
-  const cur = fx.getImageData(bx.x, bx.y, bx.w, bx.h), C = cur.data, K = frames.length;
-  const luma = (d, i) => 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
-  // Caption text = near-white and clearly brighter than the brightest normal
-  // pixels in the margin around the marked area (same frame). Centred
-  // captions cover the middle most of the time, so "usual over time" can't
-  // be trusted there; the margin can.
-  const ring = []; for(let y = 0; y < bx.h; y++) for(let x = 0; x < bx.w; x++){
-    if(x < pad || y < pad || x >= bx.w - pad || y >= bx.h - pad) ring.push(y * bx.w + x); }
-  const textOf = d => {
-    const ls = ring.map(p => luma(d, p * 4)).sort((a, b) => a - b);
-    const bg = ls[Math.floor(ls.length * 0.98)] || 200;
-    const th = clamp(bg + 10, 200, 246);
-    const m = new Uint8Array(n);
-    for(let p = 0; p < n; p++){ const i = p * 4, l = luma(d, i);
-      if(l >= th && Math.max(d[i], d[i+1], d[i+2]) - Math.min(d[i], d[i+1], d[i+2]) < 40) m[p] = 1; }
-    return m; };
-  const grow = (m, r) => { let a = m;
-    for(let s = 0; s < r; s++){ const b = new Uint8Array(n);
-      for(let y = 0; y < bx.h; y++) for(let x = 0; x < bx.w; x++){ const p = y * bx.w + x;
-        b[p] = a[p] || (x > 0 && a[p-1]) || (x < bx.w-1 && a[p+1]) || (y > 0 && a[p-bx.w]) || (y < bx.h-1 && a[p+bx.w]) ? 1 : 0; }
-      a = b; }
-    return a; };
-  const r = Math.max(2, Math.round(Math.max(W, H) / 640));
-  const mask = grow(textOf(C), r + 1);
-  const masks = frames.map(f => grow(textOf(f.px), r));
-  // fill each masked pixel from the nearest-in-time frames where it's clear
-  const order = frames.map((f, k) => k).sort((a, b) => frames[a].d - frames[b].d);
-  const todo = new Uint8Array(n); let left = 0;
-  const vals = [[], [], []];
-  for(let p = 0; p < n; p++){
-    if(!mask[p]) continue;
-    vals[0].length = vals[1].length = vals[2].length = 0;
-    for(const k of order){ if(masks[k][p]) continue; const i = p * 4, d = frames[k].px;
-      vals[0].push(d[i]); vals[1].push(d[i+1]); vals[2].push(d[i+2]); if(vals[0].length >= 5) break; }
-    if(!vals[0].length){ todo[p] = 1; left++; continue; }
-    const i = p * 4;
-    for(let c = 0; c < 3; c++){ const a = vals[c].sort((x, y) => x - y); C[i+c] = a[a.length >> 1]; }
-  }
-  // anything no frame could see: fill inward from the edges of the hole
-  for(let pass = 0; left && pass < 400; pass++){
-    const next = [];
-    for(let y = 0; y < bx.h; y++) for(let x = 0; x < bx.w; x++){
-      const p = y * bx.w + x; if(!todo[p]) continue;
-      let s0 = 0, s1 = 0, s2 = 0, c = 0;
-      for(const q of [x > 0 ? p-1 : -1, x < bx.w-1 ? p+1 : -1, y > 0 ? p-bx.w : -1, y < bx.h-1 ? p+bx.w : -1]){
-        if(q < 0 || todo[q]) continue; s0 += C[q*4]; s1 += C[q*4+1]; s2 += C[q*4+2]; c++; }
-      if(c) next.push([p, s0/c, s1/c, s2/c]);
-    }
-    if(!next.length) break;
-    for(const [p, a, b, d] of next){ C[p*4] = a; C[p*4+1] = b; C[p*4+2] = d; todo[p] = 0; left--; }
-  }
-  fx.putImageData(cur, bx.x, bx.y);
-  return full;
-}
-/* Every still goes through here: the video frame, cleaned if asked, framed
-   like the export. Keeps the uncleaned frame too, for before/after. */
-async function stillCanvas(v, at){
-  if(cap.on && cap.box){
-    const before = drawFramed(v);
-    const cleaned = await cleanCaptions(v, at);
-    if(cleaned) return { cv: drawFramed(cleaned), before };
-  }
+/* Every still goes through here: the video frame, framed like the export. */
+async function stillCanvas(v){
   return { cv: drawFramed(v) };
 }
 
@@ -2045,7 +1875,7 @@ function grabAt(t, { fromPreview = false } = {}){
       if(!groups.some(g => g.id === GRAB_GROUP)) groups.push({ id: GRAB_GROUP, title: 'Grabbed frames', sub: 'From Grab frame and the timeline' });
       const o = stillOpts();
       let src = video, at = t;
-      if(o.sharp || !fromPreview || cap.on){
+      if(o.sharp || !fromPreview){
         src = await captureVideo();
         if(o.sharp) at = await seekSharpest(src, t, 0, state.duration);
         else { src.currentTime = t; await once(src, 'seeked', 10000); }
@@ -2618,7 +2448,7 @@ function openAi(list, fromLb = false){
   if(!list.length) return;
   if(ai.abort){ toast('Nano Banana is still working on the last batch.'); return; }
   ai.list = list; ai.fromLb = fromLb;
-  if(!ai.box) ai.box = cap.box ? { ...cap.box } : { x: 0.08, y: 0.7, w: 0.84, h: 0.18 };
+  if(!ai.box) ai.box = { x: 0.08, y: 0.7, w: 0.84, h: 0.18 };
   $('#aiKey').value = aiGet('key', '');
   $('#aiModel').value = aiGet('model', 'gemini-nano-banana-2.1');
   if(!$('#aiModel').value) $('#aiModel').value = 'gemini-nano-banana-2.1';

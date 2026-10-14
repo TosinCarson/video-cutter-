@@ -42,13 +42,9 @@ Give a set of images the same colour grade.
 - Save looks by name and reuse them later. Download one image, the selected ones, or all of them at full resolution (PNG or JPEG, from the Stills card setting). Originals are never changed.
 - Grading runs on the graphics card (WebGL), so sliders update live. Images and looks are kept across refreshes.
 
-**Remove captions**
-
-For burned-in captions (ones you can't turn off). In the Stills card, press **Set area** and drag a box around where the captions appear on the video, then **Done**; **Remove captions** turns on. Every still you grab from then on is cleaned: the page finds the caption letters (near-white and brighter than the area around the box), fills them from moments up to 4 seconds away when that spot is uncovered, and fills anything left from the surrounding pixels. It works best on a still camera with captions over plain areas; each cleaned still takes a few seconds. In the viewer, hold **Hold: before** (or **O**) to compare with the captioned frame.
-
 **Remove captions with AI (Nano Banana)**
 
-For a cleaner result, send stills to Google's Nano Banana image model (Gemini). Select stills and press **Remove captions (AI)** in the Stills tab, or press it (or **R**) in the viewer.
+For a cleaner result, send stills to Google's Nano Banana image model (Gemini). Select stills and press **Remove captions (AI)** in the Stills tab or **Remove captions (Nano Banana AI)** in the Stills card on the left, or press it (or **R**) in the viewer.
 
 - **Caption area:** drag a box around the captions. Only that part (plus some surroundings for context) is sent, and only the box is pasted back with a soft edge, so the rest of the still stays the full-resolution original. It's cheaper and sharper, and the box applies to every selected still.
 - **Full picture:** sends the whole still, for captions spread around the frame. The result comes back at the model's output size (1K, 2K or 4K, depending on the model) and is scaled to the still's size.
