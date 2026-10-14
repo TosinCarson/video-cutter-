@@ -391,6 +391,8 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .ai-set a{color:var(--text)}
 .ai-row{display:flex;justify-content:space-between;align-items:center}
 .ai-link{background:none;border:0;padding:0;font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer}
+.ai-grp{display:flex;flex-direction:column;gap:10px}
+.ai-grp[hidden]{display:none}
 .ai-status{font-size:12px;color:var(--muted);min-height:18px}
 .ai-status.err{color:var(--danger)}
 .ai-btns{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;margin-top:auto}
@@ -548,7 +550,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <label><input type="radio" name="sfmt" value="jpg" id="sfJpg"><span>JPEG · smaller</span></label>
       </div>
       <label class="chk" title="Checks up to 3 frames either side of each moment and keeps the least blurry"><input type="checkbox" id="sharpest" checked> Pick the sharpest nearby frame</label>
-      <button class="btn ghost" id="capAi" title="Remove captions from the selected stills with Nano Banana (Google Gemini)">Remove captions (Nano Banana AI)</button>
+      <button class="btn ghost" id="capAi" title="Remove captions from the selected stills: free on this computer, or with Nano Banana">Remove captions (AI)</button>
       <span class="sub" id="sqDesc" hidden></span>
       <div class="auto-btns">
         <button class="btn magic" id="bmGo" disabled title="Score frames and keep the best few"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Best moments</button>
@@ -624,7 +626,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
           <button data-size="190" aria-pressed="true" title="Medium thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="1" width="6.5" height="6.5" rx="1"/><rect x="1" y="8.5" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="8.5" width="6.5" height="6.5" rx="1"/></svg></button>
           <button data-size="300" aria-pressed="false" title="Large thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg></button>
         </div>
-        <button class="btn ghost" id="gAi" disabled title="Remove captions from the selected stills with Nano Banana (Google Gemini)">Remove captions (AI)</button>
+        <button class="btn ghost" id="gAi" disabled title="Remove captions from the selected stills: free on this computer, or with Nano Banana">Remove captions (AI)</button>
         <button class="btn ghost" id="gToGrade" disabled title="Copy the selected stills into the Grade tab">Grade selected</button>
         <button class="btn ghost" id="gSelAll" disabled>Select all</button>
         <button class="btn danger-ghost" id="gDel" disabled>Delete</button>
@@ -802,7 +804,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     <div class="lb-title"><b id="lbTitle"></b><span class="num" id="lbMeta"></span></div>
     <button class="btn ghost" id="lbSel" title="Select (X)">Select</button>
     <button class="btn ghost" id="lbOrig" hidden title="Hold to see the still before captions were removed (O)">Hold: before</button>
-    <button class="btn ghost" id="lbAi" title="Remove captions from this still with Nano Banana (R)">Remove captions (AI)</button>
+    <button class="btn ghost" id="lbAi" title="Remove captions from this still (R)">Remove captions (AI)</button>
     <button class="btn ghost" id="lbZoom" title="Toggle fit / actual size (Z)">100%</button>
     <button class="btn ghost" id="lbJump" title="Show this moment on the Video tab">Show in video</button>
     <button class="btn danger-ghost" id="lbDel">Delete</button>
@@ -819,12 +821,26 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 <div class="ai" id="ai" role="dialog" aria-modal="true" aria-labelledby="aiTitle" hidden>
   <div class="ai-card">
     <div class="ai-head">
-      <b id="aiTitle">Remove captions with Nano Banana</b><span id="aiSub"></span>
+      <b id="aiTitle">Remove captions</b><span id="aiSub"></span>
       <button class="ib" id="aiClose" title="Close (Esc)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
     </div>
     <div class="ai-body">
       <div class="ai-pv"><div class="ai-frame" id="aiFrame"><img id="aiImg" alt="" draggable="false"><div class="capbox" id="aiBox"><span class="tag">Captions</span></div></div></div>
       <div class="ai-side">
+        <span class="label">Engine</span>
+        <div class="seg" role="radiogroup" aria-label="Engine">
+          <label><input type="radio" name="aiEngine" value="free" id="aiEngFree" checked><span>Free · this computer</span></label>
+          <label><input type="radio" name="aiEngine" value="gemini" id="aiEngGem"><span>Nano Banana · paid</span></label>
+        </div>
+        <div class="ai-grp" id="aiFreeOpts">
+          <span class="label">What to erase</span>
+          <div class="seg" role="radiogroup" aria-label="What to erase">
+            <label><input type="radio" name="aiErase" value="letters" id="aiLetters" checked><span>Letters only</span></label>
+            <label><input type="radio" name="aiErase" value="box" id="aiWhole"><span>Whole box</span></label>
+          </div>
+          <span class="sub" id="aiFreeDesc"></span>
+        </div>
+        <div class="ai-grp" id="aiGemOpts">
         <span class="label">What to send</span>
         <div class="seg" role="radiogroup" aria-label="What to send">
           <label><input type="radio" name="aiMode" value="area" id="aiArea" checked><span>Caption area</span></label>
@@ -851,6 +867,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
             <select id="aiSize"><option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option></select></label>
           <span class="sub">The key is kept only in this browser. Each still you send is a paid call to Google's Gemini API, and the image is sent to Google.</span>
         </details>
+        </div>
         <div class="ai-status" id="aiStatus" role="status"></div>
         <div class="ai-btns">
           <button class="btn ghost" id="aiCancel">Close</button>
@@ -2437,16 +2454,18 @@ const AI_RATIOS = ['1:1','2:3','3:2','3:4','4:3','4:5','5:4','9:16','16:9','21:9
 const AI_PROMPT = 'Remove all burned-in caption and subtitle text from this image, including any outline, shadow or box behind the letters. '
   + 'Fill in what was behind the text so it looks natural and matches the surroundings. '
   + 'Change nothing else: keep the framing, composition, people, faces, colours, lighting, grain and every other detail exactly the same.';
-const ai = { list: [], box: null, mode: 'area', abort: null, variant: 0, fromLb: false };
+const ai = { list: [], box: null, mode: 'area', engine: 'free', erase: 'letters', abort: null, variant: 0, fromLb: false };
 const aiGet = (k, d) => { try{ return localStorage.getItem('stills-ai-' + k) ?? d; }catch(e){ return d; } };
 const aiSet = (k, v) => { try{ localStorage.setItem('stills-ai-' + k, v); }catch(e){} };
 try{ ai.box = JSON.parse(aiGet('box', 'null')); }catch(e){}
 ai.mode = aiGet('mode', 'area') === 'full' ? 'full' : 'area';
+ai.engine = aiGet('engine', 'free') === 'gemini' ? 'gemini' : 'free';
+ai.erase = aiGet('erase', 'letters') === 'box' ? 'box' : 'letters';
 
 function openAi(list, fromLb = false){
   list = list.filter(Boolean);
   if(!list.length) return;
-  if(ai.abort){ toast('Nano Banana is still working on the last batch.'); return; }
+  if(ai.abort){ toast('Still working on the last batch of captions.'); return; }
   ai.list = list; ai.fromLb = fromLb;
   if(!ai.box) ai.box = { x: 0.08, y: 0.7, w: 0.84, h: 0.18 };
   $('#aiKey').value = aiGet('key', '');
@@ -2456,6 +2475,8 @@ function openAi(list, fromLb = false){
   $('#aiPrompt').value = aiGet('prompt', AI_PROMPT);
   $('#aiSet').open = !$('#aiKey').value;
   $(ai.mode === 'full' ? '#aiFull' : '#aiArea').checked = true;
+  $(ai.engine === 'gemini' ? '#aiEngGem' : '#aiEngFree').checked = true;
+  $(ai.erase === 'box' ? '#aiWhole' : '#aiLetters').checked = true;
   $('#aiImg').src = list[0].url;
   $('#aiSub').textContent = list.length === 1 ? `${list[0].w}×${list[0].h} still` : `${list.length} stills · the area applies to all of them`;
   aiStatus('');
@@ -2469,7 +2490,12 @@ function closeAi(){
 }
 function aiStatus(msg, err = false){ const el = $('#aiStatus'); el.textContent = msg; el.classList.toggle('err', err); }
 function aiSyncMode(){
-  const area = ai.mode === 'area';
+  const free = ai.engine === 'free', area = free || ai.mode === 'area';
+  $('#aiFreeOpts').hidden = !free; $('#aiGemOpts').hidden = free;
+  $('#aiFreeDesc').textContent = (ai.erase === 'letters'
+    ? 'Finds the light caption letters inside the box (with their outline) and fills only those. Best for white or yellow captions.'
+    : 'Fills everything inside the box. Use it for captions on a coloured banner, dark text, or when Letters only misses some.')
+    + (lamaReady ? '' : ' The first time, the free model (208 MB) is downloaded once and kept in this browser.');
   $('#aiFrame').classList.toggle('area', area);
   $('#aiModeDesc').textContent = area
     ? 'Drag a box around the captions. Only that part is cleaned and pasted back, so the rest of the still stays full resolution and untouched. Cheaper and sharper.'
@@ -2484,6 +2510,12 @@ function aiLayoutBox(){
   el.style.left = b.x * 100 + '%'; el.style.top = b.y * 100 + '%';
   el.style.width = b.w * 100 + '%'; el.style.height = b.h * 100 + '%';
 }
+document.querySelectorAll('input[name="aiEngine"]').forEach(r => r.addEventListener('change', () => {
+  ai.engine = $('#aiEngGem').checked ? 'gemini' : 'free'; aiSet('engine', ai.engine); aiStatus(''); aiSyncMode();
+}));
+document.querySelectorAll('input[name="aiErase"]').forEach(r => r.addEventListener('change', () => {
+  ai.erase = $('#aiWhole').checked ? 'box' : 'letters'; aiSet('erase', ai.erase); aiSyncMode();
+}));
 document.querySelectorAll('input[name="aiMode"]').forEach(r => r.addEventListener('change', () => {
   ai.mode = $('#aiFull').checked ? 'full' : 'area'; aiSet('mode', ai.mode); aiSyncMode();
 }));
@@ -2507,7 +2539,7 @@ $('#capAi').addEventListener('click', () => {
 // draw the area on the preview
 let aiDrag = null;
 $('#aiFrame').addEventListener('pointerdown', e => {
-  if(ai.mode !== 'area' || ai.abort || e.button !== 0) return;
+  if((ai.engine === 'gemini' && ai.mode !== 'area') || ai.abort || e.button !== 0) return;
   const r = $('#aiFrame').getBoundingClientRect();
   aiDrag = { r, x0: clamp((e.clientX - r.left) / r.width, 0, 1), y0: clamp((e.clientY - r.top) / r.height, 0, 1), prev: ai.box };
   $('#aiFrame').setPointerCapture(e.pointerId); e.preventDefault();
@@ -2642,18 +2674,196 @@ async function aiClean(s, signal){
     px.putImageData(id, 0, 0);
   }
   ox.drawImage(patch, P.x, P.y);
-  // compare against the captioned frame: the still itself, or what it was made from
+  return aiSave(s, src, out);
+}
+/* Save a cleaned still next to the original, keeping the captioned frame
+   (the still itself, or what it was made from) for before/after. */
+async function aiSave(s, src, out){
+  const W = src.width, H = src.height;
   const before = document.createElement('canvas'); before.width = W; before.height = H;
   before.getContext('2d', { alpha: false }).drawImage(s.before ? await blobImage(s.before) : src, 0, 0, W, H);
-  if(!groups.some(g => g.id === AI_GROUP)) groups.push({ id: AI_GROUP, title: 'Captions removed (AI)', sub: 'Cleaned with Nano Banana' });
+  if(!groups.some(g => g.id === AI_GROUP)) groups.push({ id: AI_GROUP, title: 'Captions removed', sub: 'Cleaned with LaMa (free) or Nano Banana' });
   return addStill(out, s.t, AI_GROUP, s.ext === 'png' ? 'png' : 'jpg', before, s.base);
 }
+/* ══ Free caption removal with LaMa ═════════════════════════════════
+   LaMa (Samsung AI Center, Apache-2.0) is an open inpainting model: give it
+   a picture and a mask and it fills the masked pixels to match the rest.
+   It runs here in the browser with ONNX Runtime Web (the graphics card via
+   WebGPU when there is one, otherwise the processor), so nothing is
+   uploaded. The model file is pinned to one commit and checked against its
+   SHA-256 before use, then kept in this browser's cache. It works on
+   512×512 squares, so the caption strip is cleaned in overlapping squares
+   and only the masked pixels are pasted back into the full-size still. */
+const ORT_BASE = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.29.0/dist/';
+const LAMA = {
+  url: 'https://huggingface.co/Carve/LaMa-ONNX/resolve/c3c0c9e468934d62e79c329e35d82dd09ff8c444/lama_fp32.onnx',
+  sha256: '1faef5301d78db7dda502fe59966957ec4b79dd64e16f03ed96913c7a4eb68d6',
+  size: 208044816, side: 512,
+};
+let lamaReady = false, lamaLoading = null;
+const hex = buf => [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+async function lamaBytes(onMsg, signal){
+  let cache = null;
+  try{ cache = await caches.open('stills-models'); const hit = await cache.match(LAMA.url); if(hit) return await hit.arrayBuffer(); }catch(e){ cache = null; }
+  const res = await fetch(LAMA.url, { signal });
+  if(!res.ok) throw new Error(`Couldn’t download the free model (${res.status}). Check your connection and try again.`);
+  const total = +res.headers.get('content-length') || LAMA.size, reader = res.body.getReader(), buf = new Uint8Array(LAMA.size);
+  let got = 0;
+  for(;;){
+    const { done, value } = await reader.read(); if(done) break;
+    if(got + value.length > buf.length) throw new Error('The free model download was the wrong size.');
+    buf.set(value, got); got += value.length;
+    onMsg(`downloading the free model, one time only: ${Math.round(got / 1e6)} of ${Math.round(total / 1e6)} MB`);
+  }
+  if(got !== LAMA.size) throw new Error('The free model download was cut short. Try again.');
+  onMsg('checking the model file…');
+  if(hex(await crypto.subtle.digest('SHA-256', buf)) !== LAMA.sha256) throw new Error('The downloaded model file didn’t match the expected one, so it wasn’t used.');
+  try{ await cache?.put(LAMA.url, new Response(buf, { headers: { 'content-type': 'application/octet-stream' } })); }catch(e){ /* no room to keep it: download again next time */ }
+  return buf.buffer;
+}
+function lamaSession(onMsg, signal){
+  return lamaLoading ||= (async () => {
+    const ort = await import(ORT_BASE + 'ort.webgpu.min.mjs');
+    ort.env.wasm.wasmPaths = ORT_BASE;
+    ort.env.logLevel = 'error';
+    const bytes = await lamaBytes(onMsg, signal);
+    onMsg('starting the model…');
+    let gpu = null;
+    try{ gpu = await navigator.gpu?.requestAdapter(); }catch(e){}
+    if(gpu && !(gpu.info?.isFallbackAdapter || gpu.isFallbackAdapter)){
+      try{ const sess = await ort.InferenceSession.create(bytes, { executionProviders: ['webgpu'] }); lamaReady = true; return { ort, sess, ep: 'graphics card' }; }
+      catch(e){ console.warn('WebGPU failed, using the processor', e); }
+    }
+    // on the processor, run in a background worker so the page doesn't freeze
+    let sess;
+    try{ ort.env.wasm.proxy = true; sess = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }); }
+    catch(e){ console.warn('Worker failed, running on the page', e); ort.env.wasm.proxy = false; sess = await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }); }
+    lamaReady = true;
+    return { ort, sess, ep: 'processor' };
+  })().catch(err => { lamaLoading = null; throw err; });
+}
+// grow a mask by r pixels (square neighbourhood, two passes)
+function growMask(m, w, h, r){
+  if(r <= 0) return m;
+  const a = new Uint8Array(m.length), b = new Uint8Array(m.length);
+  for(let y = 0; y < h; y++){ let last = -1e9;
+    for(let x = 0; x < w; x++){ if(m[y*w+x]) last = x; if(x - last <= r) a[y*w+x] = 1; }
+    last = 1e9; for(let x = w - 1; x >= 0; x--){ if(m[y*w+x]) last = x; if(last - x <= r) a[y*w+x] = 1; } }
+  for(let x = 0; x < w; x++){ let last = -1e9;
+    for(let y = 0; y < h; y++){ if(a[y*w+x]) last = y; if(y - last <= r) b[y*w+x] = 1; }
+    last = 1e9; for(let y = h - 1; y >= 0; y--){ if(a[y*w+x]) last = y; if(last - y <= r) b[y*w+x] = 1; } }
+  return b;
+}
+/* Mask of what to fill, over region R. Letters: pixels inside the box that
+   are clearly brighter than the brightest normal pixels around the box,
+   grown to cover the outline, shadow and soft edges. */
+function lamaMask(px, R, B, W, H){
+  const n = R.w * R.h, m = new Uint8Array(n);
+  const inB = (x, y) => x >= B.x - R.x && x < B.x - R.x + B.w && y >= B.y - R.y && y < B.y - R.y + B.h;
+  if(ai.erase === 'box'){
+    for(let y = 0; y < R.h; y++) for(let x = 0; x < R.w; x++) if(inB(x, y)) m[y * R.w + x] = 1;
+    return growMask(m, R.w, R.h, 2);
+  }
+  const luma = i => 0.299 * px[i] + 0.587 * px[i+1] + 0.114 * px[i+2];
+  const ring = [];
+  for(let y = 0; y < R.h; y++) for(let x = 0; x < R.w; x++) if(!inB(x, y)) ring.push(luma((y * R.w + x) * 4));
+  ring.sort((a, b) => a - b);
+  const bg = ring.length ? ring[Math.floor(ring.length * 0.98)] : 180;
+  const th = clamp(bg + 12, 150, 240);
+  for(let y = 0; y < R.h; y++) for(let x = 0; x < R.w; x++){ const p = y * R.w + x; if(inB(x, y) && luma(p * 4) >= th) m[p] = 1; }
+  // drop specks: a letter pixel needs at least 2 letter neighbours
+  const k = new Uint8Array(n);
+  for(let y = 1; y < R.h - 1; y++) for(let x = 1; x < R.w - 1; x++){ const p = y * R.w + x;
+    if(m[p] && (m[p-1] + m[p+1] + m[p-R.w] + m[p+R.w] + m[p-R.w-1] + m[p-R.w+1] + m[p+R.w-1] + m[p+R.w+1]) >= 2) k[p] = 1; }
+  // generous: captions usually have a dark outline or shadow, and any of it
+  // left behind gets copied around by the fill. LaMa copes well with big masks.
+  return growMask(k, R.w, R.h, Math.max(4, Math.round(Math.min(W, H) / 90)));
+}
+// start positions of size-T windows covering [a, a+len) inside [0, size)
+function lamaSpan(a, len, T, size){
+  if(len <= T) return [clamp(Math.round(a + len / 2 - T / 2), 0, size - T)];
+  const n = Math.ceil((len - T) / (T * 0.6)) + 1, out = [];
+  for(let i = 0; i < n; i++) out.push(clamp(Math.round(a + i * (len - T) / (n - 1)), 0, size - T));
+  return out;
+}
+async function lamaClean(s, signal, onMsg){
+  const { ort, sess, ep } = await lamaSession(onMsg, signal);
+  if(signal.aborted) throw new DOMException('stopped', 'AbortError');
+  const src = await blobImage(s.blob), W = src.width, H = src.height;
+  const full = document.createElement('canvas'); full.width = W; full.height = H;
+  const fx = full.getContext('2d', { alpha: false, willReadFrequently: true }); fx.drawImage(src, 0, 0);
+  const B = { x: Math.round(ai.box.x * W), y: Math.round(ai.box.y * H), w: Math.max(1, Math.round(ai.box.w * W)), h: Math.max(1, Math.round(ai.box.h * H)) };
+  const m = Math.round(Math.max(B.h * 0.5, Math.min(W, H) * 0.03, 16));
+  const R = { x: Math.max(0, B.x - m), y: Math.max(0, B.y - m) };
+  R.w = Math.min(W, B.x + B.w + m) - R.x; R.h = Math.min(H, B.y + B.h + m) - R.y;
+  const reg = fx.getImageData(R.x, R.y, R.w, R.h), px = reg.data;
+  const mask = lamaMask(px, R, B, W, H);
+  if(!mask.some(v => v)) throw new Error('No caption letters found in the box. Move the box over the captions, or choose Whole box.');
+  // pixels to paste: the mask plus a 2-pixel soft rim
+  const rim1 = growMask(mask, R.w, R.h, 1), rim2 = growMask(rim1, R.w, R.h, 1);
+  const S = LAMA.side, T = Math.min(Math.min(W, H), Math.max(S, Math.min(R.w, R.h)));
+  const xs = lamaSpan(R.x, R.w, T, W), ys = lamaSpan(R.y, R.h, T, H);
+  const acc = new Float32Array(R.w * R.h * 3), wsum = new Float32Array(R.w * R.h);
+  // the mask as a picture, so it scales with the tile
+  const mc = document.createElement('canvas'); mc.width = R.w; mc.height = R.h;
+  const mid = mc.getContext('2d').createImageData(R.w, R.h);
+  for(let p = 0; p < mask.length; p++) if(mask[p]) mid.data[p * 4 + 3] = 255;
+  mc.getContext('2d').putImageData(mid, 0, 0);
+  const tc = document.createElement('canvas'); tc.width = tc.height = S;
+  const tx = tc.getContext('2d', { willReadFrequently: true });
+  const oc = document.createElement('canvas'), ox = oc.getContext('2d', { willReadFrequently: true });
+  const tiles = ys.flatMap(y => xs.map(x => [x, y]));
+  for(let t = 0; t < tiles.length; t++){
+    if(signal.aborted) throw new DOMException('stopped', 'AbortError');
+    const [x0, y0] = tiles[t];
+    onMsg(`erasing${tiles.length > 1 ? ` part ${t + 1} of ${tiles.length}` : ''} on the ${ep}…`);
+    tx.clearRect(0, 0, S, S); tx.imageSmoothingQuality = 'high';
+    tx.drawImage(full, x0, y0, T, T, 0, 0, S, S);
+    const im = tx.getImageData(0, 0, S, S).data;
+    tx.clearRect(0, 0, S, S);
+    tx.drawImage(mc, x0 - R.x, y0 - R.y, T, T, 0, 0, S, S);
+    const mm = tx.getImageData(0, 0, S, S).data;
+    const img = new Float32Array(3 * S * S), msk = new Float32Array(S * S);
+    for(let p = 0; p < S * S; p++){
+      img[p] = im[p*4] / 255; img[S*S + p] = im[p*4+1] / 255; img[2*S*S + p] = im[p*4+2] / 255;
+      msk[p] = mm[p*4+3] > 8 ? 1 : 0;
+    }
+    if(!msk.some(v => v)) continue;
+    const res = await sess.run({ image: new ort.Tensor('float32', img, [1, 3, S, S]), mask: new ort.Tensor('float32', msk, [1, 1, S, S]) });
+    const o = res.output.data, oi = new ImageData(S, S);
+    for(let p = 0; p < S * S; p++){
+      oi.data[p*4] = o[p]; oi.data[p*4+1] = o[S*S + p]; oi.data[p*4+2] = o[2*S*S + p]; oi.data[p*4+3] = 255;
+    }
+    // back to still pixels, then blend into the region (weights fade towards tile edges)
+    tx.putImageData(oi, 0, 0);
+    oc.width = T; oc.height = T; ox.imageSmoothingQuality = 'high'; ox.drawImage(tc, 0, 0, T, T);
+    const od = ox.getImageData(0, 0, T, T).data;
+    const ax = Math.max(x0, R.x), bx = Math.min(x0 + T, R.x + R.w), ay = Math.max(y0, R.y), by = Math.min(y0 + T, R.y + R.h);
+    for(let y = ay; y < by; y++) for(let x = ax; x < bx; x++){
+      const p = (y - R.y) * R.w + (x - R.x); if(!rim2[p]) continue;
+      const q = ((y - y0) * T + (x - x0)) * 4;
+      const w = (Math.min(x - x0, x0 + T - 1 - x) + 1) * (Math.min(y - y0, y0 + T - 1 - y) + 1);
+      acc[p*3] += od[q] * w; acc[p*3+1] += od[q+1] * w; acc[p*3+2] += od[q+2] * w; wsum[p] += w;
+    }
+  }
+  for(let p = 0; p < R.w * R.h; p++){
+    if(!rim2[p] || !wsum[p]) continue;
+    const a = mask[p] ? 1 : rim1[p] ? 0.66 : 0.33, i = p * 4;
+    for(let c = 0; c < 3; c++) px[i+c] = px[i+c] * (1 - a) + (acc[p*3+c] / wsum[p]) * a;
+  }
+  fx.putImageData(reg, R.x, R.y);
+  return aiSave(s, src, full);
+}
+
 $('#aiGo').addEventListener('click', async () => {
   if(ai.abort) return;
-  const key = $('#aiKey').value.trim();
-  if(!key){ $('#aiSet').open = true; $('#aiKey').focus(); aiStatus('Paste your Gemini API key first.', true); return; }
-  aiSet('key', key); aiSet('prompt', $('#aiPrompt').value);
-  if(ai.mode === 'area' && !ai.box){ aiStatus('Drag a box around the captions first.', true); return; }
+  const free = ai.engine === 'free';
+  if(!free){
+    const key = $('#aiKey').value.trim();
+    if(!key){ $('#aiSet').open = true; $('#aiKey').focus(); aiStatus('Paste your Gemini API key first.', true); return; }
+    aiSet('key', key); aiSet('prompt', $('#aiPrompt').value);
+  }
+  if((free || ai.mode === 'area') && !ai.box){ aiStatus('Drag a box around the captions first.', true); return; }
   ai.abort = new AbortController();
   $('#aiGo').disabled = true; $('#aiCancel').textContent = 'Stop';
   const made = [], list = ai.list.slice();
@@ -2661,13 +2871,14 @@ $('#aiGo').addEventListener('click', async () => {
   try{
     for(let i = 0; i < list.length; i++){
       if(ai.abort.signal.aborted) break;
-      aiStatus(`Cleaning ${list.length > 1 ? `${i + 1} of ${list.length}` : 'the still'}… this can take 10–30 seconds.`);
-      try{ made.push(await aiClean(list[i], ai.abort.signal)); renderGallery(); }
+      const which = list.length > 1 ? `${i + 1} of ${list.length}` : 'the still';
+      aiStatus(`Cleaning ${which}… ${free ? '' : 'this can take 10–30 seconds.'}`);
+      try{ made.push(free ? await lamaClean(list[i], ai.abort.signal, m => aiStatus(`Cleaning ${which}… ${m}`)) : await aiClean(list[i], ai.abort.signal)); renderGallery(); }
       catch(err){
         if(err.name === 'AbortError') break;
         failed++; lastErr = err.message || String(err);
         if(/free tier|limit: 0/i.test(lastErr)) lastErr = 'Your Gemini key is on Google’s Free tier, which allows no Nano Banana images. Turn on billing for its project in Google AI Studio (Set up billing next to the key, or ai.dev/rate-limit), then try again. The same key keeps working.';
-        if(list.length === 1 || /api key|permission|quota|exhausted|billing/i.test(lastErr)) break;
+        if(list.length === 1 || /api key|permission|quota|exhausted|billing|download|model/i.test(lastErr)) break;
       }
     }
   }finally{

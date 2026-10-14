@@ -42,15 +42,19 @@ Give a set of images the same colour grade.
 - Save looks by name and reuse them later. Download one image, the selected ones, or all of them at full resolution (PNG or JPEG, from the Stills card setting). Originals are never changed.
 - Grading runs on the graphics card (WebGL), so sliders update live. Images and looks are kept across refreshes.
 
-**Remove captions with AI (Nano Banana)**
+**Remove captions (AI)**
 
-For a cleaner result, send stills to Google's Nano Banana image model (Gemini). Select stills and press **Remove captions (AI)** in the Stills tab or **Remove captions (Nano Banana AI)** in the Stills card on the left, or press it (or **R**) in the viewer.
+Select stills and press **Remove captions (AI)** in the Stills tab or in the Stills card on the left, or press it (or **R**) in the viewer. Drag a box around the captions, then pick an engine. Each cleaned still is saved as a new still in a "Captions removed" group and the original stays; hold **Hold: before** (or **O**) in the viewer to compare.
 
-- **Caption area:** drag a box around the captions. Only that part (plus some surroundings for context) is sent, and only the box is pasted back with a soft edge, so the rest of the still stays the full-resolution original. It's cheaper and sharper, and the box applies to every selected still.
-- **Full picture:** sends the whole still, for captions spread around the frame. The result comes back at the model's output size (1K, 2K or 4K, depending on the model) and is scaled to the still's size.
-- The instructions can be edited (**Reset** restores the default). Pick the model and output size under **Gemini API settings**.
-- Each cleaned still is saved as a new still in a "Captions removed (AI)" group. The original stays. Hold **Hold: before** (or **O**) in the viewer to compare.
-- You need your own Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)). It's kept only in this browser. Each still is a paid call to Google, and **the image is sent to Google**. This is the only feature that uploads anything.
+- **Free · this computer** (default) uses [LaMa](https://github.com/advimman/lama), an open-source inpainting model (Apache-2.0), running in your browser with [ONNX Runtime Web](https://onnxruntime.ai/). Nothing is uploaded and there's no key or cost.
+  - **Letters only** finds the light caption letters in the box, with their outline, and fills just those. Best for white or yellow captions.
+  - **Whole box** fills everything in the box, for captions on a coloured banner or dark text. It's softer, since the whole strip is rebuilt.
+  - The first time, the model (208 MB) is downloaded once from Hugging Face, checked against its SHA-256 fingerprint and kept in this browser. It uses the graphics card (WebGPU) when it can, otherwise the processor, which takes longer (roughly 10–30 seconds a still).
+  - Only the masked pixels are pasted back, so the rest of the still stays the full-resolution original.
+- **Nano Banana · paid** sends the still to Google's Gemini image model. Better for captions over faces or busy detail.
+  - **Caption area** sends just the box (plus context) and pastes back only the box; **Full picture** sends the whole still, for captions spread around the frame (the result comes back at 1K, 2K or 4K and is scaled to the still's size).
+  - The instructions can be edited (**Reset** restores the default). Pick the model and output size under **Gemini API settings**.
+  - You need your own Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)) on a project with billing turned on; the Free tier allows no Nano Banana images. The key is kept only in this browser. Each still is a paid call (a few cents) and **the image is sent to Google**. This is the only feature that uploads anything.
 
 **Aspect ratio**
 
