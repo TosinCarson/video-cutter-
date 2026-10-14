@@ -11,7 +11,7 @@ A browser tool for grabbing full-resolution stills from videos, and cutting them
    Name, adjust, reorder or delete clips in the list, or drag a clip's edges on the timeline to trim it. Zoom the timeline with + and − (or Ctrl/⌘ + scroll) for fine cuts.
 4. Tick the clips you want and export them as separate files or as one joined video.
 
-Your last video, your clip marks and your stills are kept in this browser's own storage, so they come back after a refresh. Close a video with the × next to its name if you don't want it reopened. Nothing is uploaded.
+Your last video, your clip marks and your stills are kept in this browser's own storage, so they come back after a refresh. Close a video with the × next to its name if you don't want it reopened. Nothing is uploaded, except stills you choose to send to Nano Banana.
 
 Cutting runs in your browser with [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm), so videos are never uploaded. The first visit downloads the engine (about 31 MB) from jsDelivr, and the browser caches it after that.
 
@@ -45,6 +45,16 @@ Give a set of images the same colour grade.
 **Remove captions**
 
 For burned-in captions (ones you can't turn off). In the Stills card, press **Set area** and drag a box around where the captions appear on the video, then **Done**; **Remove captions** turns on. Every still you grab from then on is cleaned: the page finds the caption letters (near-white and brighter than the area around the box), fills them from moments up to 4 seconds away when that spot is uncovered, and fills anything left from the surrounding pixels. It works best on a still camera with captions over plain areas; each cleaned still takes a few seconds. In the viewer, hold **Hold: before** (or **O**) to compare with the captioned frame.
+
+**Remove captions with AI (Nano Banana)**
+
+For a cleaner result, send stills to Google's Nano Banana image model (Gemini). Select stills and press **Remove captions (AI)** in the Stills tab, or press it (or **R**) in the viewer.
+
+- **Caption area:** drag a box around the captions. Only that part (plus some surroundings for context) is sent, and only the box is pasted back with a soft edge, so the rest of the still stays the full-resolution original. It's cheaper and sharper, and the box applies to every selected still.
+- **Full picture:** sends the whole still, for captions spread around the frame. The result comes back at the model's output size (1K, 2K or 4K, depending on the model) and is scaled to the still's size.
+- The instructions can be edited (**Reset** restores the default). Pick the model and output size under **Gemini API settings**.
+- Each cleaned still is saved as a new still in a "Captions removed (AI)" group. The original stays. Hold **Hold: before** (or **O**) in the viewer to compare.
+- You need your own Gemini API key ([Google AI Studio](https://aistudio.google.com/apikey)). It's kept only in this browser. Each still is a paid call to Google, and **the image is sent to Google**. This is the only feature that uploads anything.
 
 **Aspect ratio**
 

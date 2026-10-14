@@ -371,6 +371,44 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .app.right-off{grid-template-columns:var(--lw) minmax(0,1fr);grid-template-areas:"top top" "left center" "tl tl"}
 .app.left-off.right-off{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "center" "tl"}
 .app.left-off .left,.app.right-off .right{display:none}
+/* Nano Banana caption removal */
+.ai{position:fixed;inset:0;z-index:60;background:rgba(6,7,9,.82);display:grid;place-items:center;padding:16px}
+.ai-card{width:min(1080px,100%);max-height:calc(100vh - 32px);background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden}
+.ai-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.ai-head b{font-size:13.5px}
+.ai-head span{font-size:11.5px;color:var(--faint);margin-right:auto}
+.ai-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;min-height:0}
+.ai-pv{display:grid;place-items:center;padding:16px;background:var(--bg);min-height:0;overflow:hidden}
+.ai-frame{position:relative;display:inline-block;max-width:100%;touch-action:none;user-select:none}
+.ai-frame img{display:block;max-width:100%;max-height:calc(100vh - 180px);border-radius:3px}
+.ai-frame.area{cursor:crosshair}
+.ai-frame .capbox{box-shadow:0 0 0 9999px rgba(0,0,0,.45);background:rgba(255,255,255,.06);border-style:solid}
+.ai-frame:not(.area) .capbox{display:none}
+.ai-frame{overflow:hidden}
+.ai-frame .capbox .tag{top:4px;left:4px}
+.ai-side{border-left:1px solid var(--line);padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:0}
+.ai-side .sub{font-size:11.5px;color:var(--muted);line-height:1.45}
+.ai-side textarea{width:100%;min-height:96px;resize:vertical;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 9px;font:12px/1.5 var(--ui)}
+.ai-side input[type=text],.ai-side input[type=password],.ai-side select{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:var(--r);height:32px;padding:0 9px;font-size:12px}
+.ai-field{display:grid;gap:5px}
+.ai-field > span{font-size:11.5px;color:var(--muted)}
+.ai-set{border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;display:grid;gap:10px}
+.ai-set summary{cursor:pointer;font-size:12px;font-weight:600}
+.ai-set[open]{gap:10px}
+.ai-set[open] summary{margin-bottom:6px}
+.ai-set a{color:var(--text)}
+.ai-row{display:flex;justify-content:space-between;align-items:center}
+.ai-link{background:none;border:0;padding:0;font-size:11.5px;color:var(--muted);text-decoration:underline;cursor:pointer}
+.ai-status{font-size:12px;color:var(--muted);min-height:18px}
+.ai-status.err{color:var(--danger)}
+.ai-btns{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;margin-top:auto}
+@media (max-width:760px){
+  .ai{place-items:stretch;padding:0}
+  .ai-card{max-height:none;height:100%;border-radius:0}
+  .ai-body{grid-template-columns:minmax(0,1fr);overflow-y:auto}
+  .ai-side{border-left:0;border-top:1px solid var(--line);overflow:visible}
+  .ai-frame img{max-height:50vh}
+}
 /* drag a panel's inner edge to resize it */
 .app > .sizer{z-index:5;width:9px;background:transparent;cursor:col-resize;touch-action:none;position:relative}
 .sizer.l{grid-area:left;justify-self:end;margin-right:-5px}
@@ -599,6 +637,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
           <button data-size="190" aria-pressed="true" title="Medium thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="1" width="6.5" height="6.5" rx="1"/><rect x="1" y="8.5" width="6.5" height="6.5" rx="1"/><rect x="8.5" y="8.5" width="6.5" height="6.5" rx="1"/></svg></button>
           <button data-size="300" aria-pressed="false" title="Large thumbnails"><svg viewBox="0 0 16 16"><rect x="1" y="1" width="14" height="14" rx="1.5"/></svg></button>
         </div>
+        <button class="btn ghost" id="gAi" disabled title="Remove captions from the selected stills with Nano Banana (Google Gemini)">Remove captions (AI)</button>
         <button class="btn ghost" id="gToGrade" disabled title="Copy the selected stills into the Grade tab">Grade selected</button>
         <button class="btn ghost" id="gSelAll" disabled>Select all</button>
         <button class="btn danger-ghost" id="gDel" disabled>Delete</button>
@@ -775,7 +814,8 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
   <div class="lb-top">
     <div class="lb-title"><b id="lbTitle"></b><span class="num" id="lbMeta"></span></div>
     <button class="btn ghost" id="lbSel" title="Select (X)">Select</button>
-    <button class="btn ghost" id="lbOrig" hidden title="Hold to see the frame before captions were removed (O)">Hold: before</button>
+    <button class="btn ghost" id="lbOrig" hidden title="Hold to see the still before captions were removed (O)">Hold: before</button>
+    <button class="btn ghost" id="lbAi" title="Remove captions from this still with Nano Banana (R)">Remove captions (AI)</button>
     <button class="btn ghost" id="lbZoom" title="Toggle fit / actual size (Z)">100%</button>
     <button class="btn ghost" id="lbJump" title="Show this moment on the Video tab">Show in video</button>
     <button class="btn danger-ghost" id="lbDel">Delete</button>
@@ -786,6 +826,51 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
     <img id="lbImg" alt="">
     <button class="lb-nav prev" id="lbPrev" aria-label="Previous still (←)"><svg class="i" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
     <button class="lb-nav next" id="lbNext" aria-label="Next still (→)"><svg class="i" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+  </div>
+</div>
+
+<div class="ai" id="ai" role="dialog" aria-modal="true" aria-labelledby="aiTitle" hidden>
+  <div class="ai-card">
+    <div class="ai-head">
+      <b id="aiTitle">Remove captions with Nano Banana</b><span id="aiSub"></span>
+      <button class="ib" id="aiClose" title="Close (Esc)" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="ai-body">
+      <div class="ai-pv"><div class="ai-frame" id="aiFrame"><img id="aiImg" alt="" draggable="false"><div class="capbox" id="aiBox"><span class="tag">Captions</span></div></div></div>
+      <div class="ai-side">
+        <span class="label">What to send</span>
+        <div class="seg" role="radiogroup" aria-label="What to send">
+          <label><input type="radio" name="aiMode" value="area" id="aiArea" checked><span>Caption area</span></label>
+          <label><input type="radio" name="aiMode" value="full" id="aiFull"><span>Full picture</span></label>
+        </div>
+        <span class="sub" id="aiModeDesc"></span>
+        <div class="ai-field">
+          <div class="ai-row"><span class="label">Instructions</span><button class="ai-link" id="aiPromptReset" type="button">Reset</button></div>
+          <textarea id="aiPrompt" spellcheck="false" aria-label="Instructions for Nano Banana"></textarea>
+        </div>
+        <details class="ai-set" id="aiSet">
+          <summary>Gemini API settings</summary>
+          <label class="ai-field"><span>API key · <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">get one from Google AI Studio</a></span>
+            <input type="password" id="aiKey" autocomplete="off" spellcheck="false" placeholder="Paste your Gemini API key"></label>
+          <label class="ai-field"><span>Model</span>
+            <select id="aiModel">
+              <option value="gemini-nano-banana-2.1">Nano Banana 2.1 (recommended)</option>
+              <option value="gemini-3-pro-image">Nano Banana Pro (best, slower, costs more)</option>
+              <option value="gemini-3.1-flash-image">Nano Banana 2</option>
+              <option value="gemini-3.1-flash-lite-image">Nano Banana 2 Lite (fastest, cheapest)</option>
+              <option value="gemini-2.5-flash-image">Nano Banana (original)</option>
+            </select></label>
+          <label class="ai-field"><span>Output size (asked for; not every model supports 4K)</span>
+            <select id="aiSize"><option value="1K">1K</option><option value="2K">2K</option><option value="4K">4K</option></select></label>
+          <span class="sub">The key is kept only in this browser. Each still you send is a paid call to Google's Gemini API, and the image is sent to Google.</span>
+        </details>
+        <div class="ai-status" id="aiStatus" role="status"></div>
+        <div class="ai-btns">
+          <button class="btn ghost" id="aiCancel">Close</button>
+          <button class="btn" id="aiGo">Remove captions</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
@@ -803,6 +888,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <span><kbd>X</kbd></span><span>Select still (viewer)</span>
         <span><kbd>Z</kbd></span><span>Fit / 100% (viewer)</span>
         <span><kbd>O</kbd></span><span>Hold: before caption removal (viewer)</span>
+        <span><kbd>R</kbd></span><span>Remove captions with AI (viewer)</span>
         <span><kbd>T</kbd></span><span>Show / hide timeline</span>
         <span><kbd>\</kbd></span><span>Hold to see the original (Grade)</span>
         <span><kbd>[</kbd></span><span>Show / hide the Clips panel</span>
@@ -1230,6 +1316,7 @@ function setHint(msg){
 
 document.addEventListener('keydown', e => {
   const k = e.key;
+  if(!$('#ai').hidden){ if(k === 'Escape') closeAi(); return; }
   if(!$('#lb').hidden){ lbKey(e); return; }
   if(e.metaKey || e.ctrlKey || e.altKey) return;
   if(e.target.closest('input,select,textarea')) return;
@@ -1720,7 +1807,7 @@ function drawFramed(src){
   return cv;
 }
 const canvasBlob = (cv, type, q) => new Promise(r => cv.toBlob(r, type, q));
-async function addStill(cv, t, gid, fmtName, beforeCv = null){
+async function addStill(cv, t, gid, fmtName, beforeCv = null, base = null){
   const png = fmtName === 'png';
   const blob = await canvasBlob(cv, png ? 'image/png' : 'image/jpeg', png ? undefined : 0.97);
   if(!blob) throw new Error('This browser couldn’t read that frame.');
@@ -1730,7 +1817,7 @@ async function addStill(cv, t, gid, fmtName, beforeCv = null){
   tc.getContext('2d').drawImage(cv, 0, 0, tc.width, tc.height);
   const thumbBlob = await canvasBlob(tc, 'image/jpeg', 0.82);
   const s = { id: stillSeq++, gid, blob, url: URL.createObjectURL(blob), thumb: URL.createObjectURL(thumbBlob), w: cv.width, h: cv.height, t, sel: false,
-    ext: png ? 'png' : 'jpg', base: safeName(state.file.name.replace(/\.[^.]+$/,'')) };
+    ext: png ? 'png' : 'jpg', base: base || safeName(state.file.name.replace(/\.[^.]+$/,'')) };
   if(beforeCv){
     s.before = await canvasBlob(beforeCv, 'image/jpeg', 0.9);
     s.beforeUrl = s.before && URL.createObjectURL(s.before);
@@ -2342,7 +2429,7 @@ function renderGallery(){
   $('#gInfo').innerHTML = n ? `<b class="num">${n}</b> still${n === 1 ? '' : 's'}${sel ? ` · <b class="num">${sel}</b> selected` : ''}` : 'No stills yet';
   $('#gEmpty').hidden = n > 0;
   $('#gSelAll').disabled = $('#gDlAll').disabled = !n;
-  $('#gToGrade').disabled = !sel;
+  $('#gToGrade').disabled = $('#gAi').disabled = !sel;
   $('#gToGrade').textContent = sel ? `Grade ${sel}` : 'Grade selected';
   syncBm();
   $('#gSelAll').textContent = n && sel === n ? 'Clear selection' : 'Select all';
@@ -2501,8 +2588,261 @@ function lbKey(e){
   else if(k === 'x' || k === 'X' || (k === ' ' && !e.target.closest('button'))){ e.preventDefault(); $('#lbSel').click(); }
   else if(k === 'd' || k === 'D'){ $('#lbDl').click(); }
   else if(k === 'z' || k === 'Z'){ toggleZoom(); }
+  else if(k === 'r' || k === 'R'){ $('#lbAi').click(); }
   else if((k === 'o' || k === 'O') && !e.repeat){ showBefore(true); }
 }
+
+/* ══ Caption removal with Nano Banana (Google Gemini) ═══════════════
+   Sends a still (or just the area around its captions) to Gemini's image
+   model with the user's own API key, and saves the answer as a new still
+   next to the original. In "Caption area" mode only the marked box is
+   pasted back (with a soft edge), so the rest of the frame stays the
+   untouched full-resolution original. The model only returns a handful of
+   aspect ratios, so the region sent is widened to the nearest one, using
+   real pixels where possible and black padding otherwise. */
+const AI_GROUP = 'ai-clean';
+const AI_RATIOS = ['1:1','2:3','3:2','3:4','4:3','4:5','5:4','9:16','16:9','21:9'];
+const AI_PROMPT = 'Remove all burned-in caption and subtitle text from this image, including any outline, shadow or box behind the letters. '
+  + 'Fill in what was behind the text so it looks natural and matches the surroundings. '
+  + 'Change nothing else: keep the framing, composition, people, faces, colours, lighting, grain and every other detail exactly the same.';
+const ai = { list: [], box: null, mode: 'area', abort: null, variant: 0, fromLb: false };
+const aiGet = (k, d) => { try{ return localStorage.getItem('stills-ai-' + k) ?? d; }catch(e){ return d; } };
+const aiSet = (k, v) => { try{ localStorage.setItem('stills-ai-' + k, v); }catch(e){} };
+try{ ai.box = JSON.parse(aiGet('box', 'null')); }catch(e){}
+ai.mode = aiGet('mode', 'area') === 'full' ? 'full' : 'area';
+
+function openAi(list, fromLb = false){
+  list = list.filter(Boolean);
+  if(!list.length) return;
+  if(ai.abort){ toast('Nano Banana is still working on the last batch.'); return; }
+  ai.list = list; ai.fromLb = fromLb;
+  if(!ai.box) ai.box = cap.box ? { ...cap.box } : { x: 0.08, y: 0.7, w: 0.84, h: 0.18 };
+  $('#aiKey').value = aiGet('key', '');
+  $('#aiModel').value = aiGet('model', 'gemini-nano-banana-2.1');
+  if(!$('#aiModel').value) $('#aiModel').value = 'gemini-nano-banana-2.1';
+  $('#aiSize').value = aiGet('size', '2K');
+  $('#aiPrompt').value = aiGet('prompt', AI_PROMPT);
+  $('#aiSet').open = !$('#aiKey').value;
+  $(ai.mode === 'full' ? '#aiFull' : '#aiArea').checked = true;
+  $('#aiImg').src = list[0].url;
+  $('#aiSub').textContent = list.length === 1 ? `${list[0].w}×${list[0].h} still` : `${list.length} stills · the area applies to all of them`;
+  aiStatus('');
+  aiSyncMode();
+  $('#ai').hidden = false;
+  $('#aiGo').focus();
+}
+function closeAi(){
+  if(ai.abort){ ai.abort.abort(); return; }
+  $('#ai').hidden = true;
+}
+function aiStatus(msg, err = false){ const el = $('#aiStatus'); el.textContent = msg; el.classList.toggle('err', err); }
+function aiSyncMode(){
+  const area = ai.mode === 'area';
+  $('#aiFrame').classList.toggle('area', area);
+  $('#aiModeDesc').textContent = area
+    ? 'Drag a box around the captions. Only that part is cleaned and pasted back, so the rest of the still stays full resolution and untouched. Cheaper and sharper.'
+    : 'Sends the whole still. Use it when captions are spread around the picture. The result comes back at the model’s output size and is scaled to the still’s size.';
+  const n = ai.list.length;
+  $('#aiGo').textContent = `Remove captions${n > 1 ? ` from ${n} stills` : ''}`;
+  aiLayoutBox();
+}
+function aiLayoutBox(){
+  const b = ai.box, el = $('#aiBox');
+  if(!b) return;
+  el.style.left = b.x * 100 + '%'; el.style.top = b.y * 100 + '%';
+  el.style.width = b.w * 100 + '%'; el.style.height = b.h * 100 + '%';
+}
+document.querySelectorAll('input[name="aiMode"]').forEach(r => r.addEventListener('change', () => {
+  ai.mode = $('#aiFull').checked ? 'full' : 'area'; aiSet('mode', ai.mode); aiSyncMode();
+}));
+$('#aiKey').addEventListener('change', e => aiSet('key', e.target.value.trim()));
+$('#aiModel').addEventListener('change', e => { aiSet('model', e.target.value); ai.variant = 0; });
+$('#aiSize').addEventListener('change', e => aiSet('size', e.target.value));
+$('#aiPrompt').addEventListener('change', e => aiSet('prompt', e.target.value));
+$('#aiPromptReset').addEventListener('click', () => { $('#aiPrompt').value = AI_PROMPT; aiSet('prompt', AI_PROMPT); });
+$('#aiClose').addEventListener('click', closeAi);
+$('#aiCancel').addEventListener('click', closeAi);
+$('#ai').addEventListener('click', e => { if(e.target === e.currentTarget && !ai.abort) closeAi(); });
+$('#gAi').addEventListener('click', () => openAi(orderedStills().filter(s => s.sel)));
+$('#lbAi').addEventListener('click', () => openAi([lbStill()], true));
+
+// draw the area on the preview
+let aiDrag = null;
+$('#aiFrame').addEventListener('pointerdown', e => {
+  if(ai.mode !== 'area' || ai.abort || e.button !== 0) return;
+  const r = $('#aiFrame').getBoundingClientRect();
+  aiDrag = { r, x0: clamp((e.clientX - r.left) / r.width, 0, 1), y0: clamp((e.clientY - r.top) / r.height, 0, 1), prev: ai.box };
+  $('#aiFrame').setPointerCapture(e.pointerId); e.preventDefault();
+});
+$('#aiFrame').addEventListener('pointermove', e => {
+  if(!aiDrag) return;
+  const { r, x0, y0 } = aiDrag;
+  const x1 = clamp((e.clientX - r.left) / r.width, 0, 1), y1 = clamp((e.clientY - r.top) / r.height, 0, 1);
+  ai.box = { x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
+  aiLayoutBox();
+});
+$('#aiFrame').addEventListener('pointerup', () => {
+  if(!aiDrag) return;
+  if(ai.box.w < 0.01 || ai.box.h < 0.01) ai.box = aiDrag.prev;
+  aiDrag = null; aiLayoutBox(); aiSet('box', JSON.stringify(ai.box));
+});
+
+/* Pick the region to send: the smallest supported aspect ratio around it,
+   preferring real pixels over padding. Returns the crop taken from the
+   still and where it sits on a canvas of exactly that ratio. */
+function aiPlan(W, H, reg){
+  let best = null;
+  for(const ratio of AI_RATIOS){
+    const [a, b] = ratio.split(':').map(Number), q = a / b;
+    const tw = Math.max(reg.w, reg.h * q), th = tw / q;
+    const cw = Math.min(tw, W), ch = Math.min(th, H);
+    const cx = clamp(reg.x + reg.w / 2 - cw / 2, 0, W - cw), cy = clamp(reg.y + reg.h / 2 - ch / 2, 0, H - ch);
+    const score = tw * th + 3 * (tw * th - cw * ch);
+    if(!best || score < best.score) best = { ratio, score, tw, th, crop: { x: cx, y: cy, w: cw, h: ch }, off: { x: (tw - cw) / 2, y: (th - ch) / 2 } };
+  }
+  return best;
+}
+const blobImage = blob => createImageBitmap(blob);
+const b64 = blob => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = () => rej(r.error); r.readAsDataURL(blob); });
+// Find the returned image in either API's answer, wherever it's nested.
+function aiFindImage(j){
+  // the answer can echo the request, so the model's image is the last one
+  let img = null; const texts = [];
+  const walk = o => {
+    if(!o || typeof o !== 'object') return;
+    if(Array.isArray(o)){ o.forEach(walk); return; }
+    const inl = o.inlineData || o.inline_data;
+    if(inl?.data){ img = { data: inl.data, type: inl.mimeType || inl.mime_type || 'image/png' }; return; }
+    if(o.type === 'image' && typeof o.data === 'string' && o.data.length > 100){ img = { data: o.data, type: o.mime_type || o.mimeType || 'image/png' }; return; }
+    if(typeof o.text === 'string') texts.push(o.text);
+    Object.values(o).forEach(walk);
+  };
+  walk(j);
+  return { img, text: texts.join(' ').trim(), reason: j?.candidates?.[0]?.finishReason || j?.promptFeedback?.blockReason || '' };
+}
+/* Calls Gemini. Google now documents the Interactions API; generateContent
+   is the older route. Try the richest request first and fall back, then
+   remember which one worked for this model. */
+async function aiCall(jpeg, ratio, signal){
+  const key = $('#aiKey').value.trim(), model = $('#aiModel').value, size = $('#aiSize').value, prompt = $('#aiPrompt').value.trim() || AI_PROMPT;
+  const base = 'https://generativelanguage.googleapis.com/v1beta/';
+  const fmt = (sz) => ({ type: 'image', aspect_ratio: ratio, ...(sz ? { image_size: size } : {}) });
+  const gcfg = (sz) => ({ responseModalities: ['IMAGE'], imageConfig: { aspectRatio: ratio, ...(sz ? { imageSize: size } : {}) } });
+  const variants = [
+    () => [base + 'interactions', { model, input: [{ type: 'text', text: prompt }, { type: 'image', mime_type: 'image/jpeg', data: jpeg }], response_format: fmt(true) }],
+    () => [base + 'interactions', { model, input: [{ type: 'text', text: prompt }, { type: 'image', mime_type: 'image/jpeg', data: jpeg }], response_format: fmt(false) }],
+    () => [base + `models/${model}:generateContent`, { contents: [{ role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: jpeg } }] }], generationConfig: gcfg(true) }],
+    () => [base + `models/${model}:generateContent`, { contents: [{ role: 'user', parts: [{ text: prompt }, { inline_data: { mime_type: 'image/jpeg', data: jpeg } }] }], generationConfig: gcfg(false) }],
+  ];
+  let firstErr = null;
+  for(let i = ai.variant; i < variants.length; i++){
+    const [url, body] = variants[i]();
+    const res = await fetch(url, { method: 'POST', signal, headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify(body) });
+    const j = await res.json().catch(() => ({}));
+    if(!res.ok){
+      const msg = j?.error?.message || `Gemini answered ${res.status}`;
+      // a bad key, no access, or out of quota won't be fixed by another request shape
+      if(res.status === 401 || res.status === 403 || res.status === 429 || /api key/i.test(msg)) throw new Error(msg);
+      firstErr ||= msg; continue;
+    }
+    const found = aiFindImage(j);
+    if(!found.img){
+      if(i < variants.length - 1 && !found.text && !found.reason){ firstErr ||= 'No image in the answer'; continue; }
+      throw new Error(`Nano Banana didn’t return an image${found.reason ? ` (${found.reason})` : ''}${found.text ? `: ${found.text.slice(0, 200)}` : '.'}`);
+    }
+    ai.variant = i;
+    const bytes = Uint8Array.from(atob(found.img.data), c => c.charCodeAt(0));
+    return blobImage(new Blob([bytes], { type: found.img.type }));
+  }
+  throw new Error(firstErr || 'Gemini didn’t accept the request.');
+}
+async function aiClean(s, signal){
+  const src = await blobImage(s.blob), W = src.width, H = src.height;
+  const full = ai.mode === 'full';
+  // the box drawn on the preview, in this still's pixels
+  const B = full ? { x: 0, y: 0, w: W, h: H } : {
+    x: Math.round(ai.box.x * W), y: Math.round(ai.box.y * H), w: Math.max(1, Math.round(ai.box.w * W)), h: Math.max(1, Math.round(ai.box.h * H)) };
+  // context around the box helps the model see what belongs there
+  let reg = B;
+  if(!full){
+    const m = Math.round(Math.max(B.h * 0.75, Math.min(W, H) * 0.06));
+    const x = Math.max(0, B.x - m), y = Math.max(0, B.y - m);
+    reg = { x, y, w: Math.min(W, B.x + B.w + m) - x, h: Math.min(H, B.y + B.h + m) - y };
+  }
+  const plan = aiPlan(W, H, reg);
+  const k = Math.min(1, 3072 / Math.max(plan.tw, plan.th));
+  const send = document.createElement('canvas');
+  send.width = Math.round(plan.tw * k); send.height = Math.round(plan.th * k);
+  const sx = send.getContext('2d', { alpha: false });
+  sx.fillStyle = '#000'; sx.fillRect(0, 0, send.width, send.height);
+  sx.drawImage(src, plan.crop.x, plan.crop.y, plan.crop.w, plan.crop.h, plan.off.x * k, plan.off.y * k, plan.crop.w * k, plan.crop.h * k);
+  const jpeg = await b64(await canvasBlob(send, 'image/jpeg', 0.95));
+  const outImg = await aiCall(jpeg, plan.ratio, signal);
+  // map still pixels → returned image pixels
+  const fx = outImg.width / plan.tw, fy = outImg.height / plan.th;
+  const toOut = (x, y) => [(x - plan.crop.x + plan.off.x) * fx, (y - plan.crop.y + plan.off.y) * fy];
+  const out = document.createElement('canvas'); out.width = W; out.height = H;
+  const ox = out.getContext('2d', { alpha: false });
+  ox.drawImage(src, 0, 0);
+  // the patch: the box plus a soft edge so it blends into the original
+  const f = full ? 0 : clamp(Math.round(Math.min(W, H) * 0.012), 4, 32);
+  const P = { x: Math.max(0, B.x - f), y: Math.max(0, B.y - f) };
+  P.w = Math.min(W, B.x + B.w + f) - P.x; P.h = Math.min(H, B.y + B.h + f) - P.y;
+  const patch = document.createElement('canvas'); patch.width = P.w; patch.height = P.h;
+  const px = patch.getContext('2d', { willReadFrequently: true });
+  const [ax, ay] = toOut(P.x, P.y), [bx, by] = toOut(P.x + P.w, P.y + P.h);
+  px.imageSmoothingQuality = 'high';
+  px.drawImage(outImg, ax, ay, bx - ax, by - ay, 0, 0, P.w, P.h);
+  if(f){
+    // fade only on sides that aren't the edge of the picture
+    const id = px.getImageData(0, 0, P.w, P.h), d = id.data;
+    const el = P.x > 0, et = P.y > 0, er = P.x + P.w < W, eb = P.y + P.h < H;
+    for(let y = 0; y < P.h; y++) for(let x = 0; x < P.w; x++){
+      const dist = Math.min(el ? x : 1e9, et ? y : 1e9, er ? P.w - 1 - x : 1e9, eb ? P.h - 1 - y : 1e9);
+      if(dist < f) d[(y * P.w + x) * 4 + 3] = Math.round(255 * (dist + 0.5) / f);
+    }
+    px.putImageData(id, 0, 0);
+  }
+  ox.drawImage(patch, P.x, P.y);
+  // compare against the captioned frame: the still itself, or what it was made from
+  const before = document.createElement('canvas'); before.width = W; before.height = H;
+  before.getContext('2d', { alpha: false }).drawImage(s.before ? await blobImage(s.before) : src, 0, 0, W, H);
+  if(!groups.some(g => g.id === AI_GROUP)) groups.push({ id: AI_GROUP, title: 'Captions removed (AI)', sub: 'Cleaned with Nano Banana' });
+  return addStill(out, s.t, AI_GROUP, s.ext === 'png' ? 'png' : 'jpg', before, s.base);
+}
+$('#aiGo').addEventListener('click', async () => {
+  if(ai.abort) return;
+  const key = $('#aiKey').value.trim();
+  if(!key){ $('#aiSet').open = true; $('#aiKey').focus(); aiStatus('Paste your Gemini API key first.', true); return; }
+  aiSet('key', key); aiSet('prompt', $('#aiPrompt').value);
+  if(ai.mode === 'area' && !ai.box){ aiStatus('Drag a box around the captions first.', true); return; }
+  ai.abort = new AbortController();
+  $('#aiGo').disabled = true; $('#aiCancel').textContent = 'Stop';
+  const made = [], list = ai.list.slice();
+  let failed = 0, lastErr = '';
+  try{
+    for(let i = 0; i < list.length; i++){
+      if(ai.abort.signal.aborted) break;
+      aiStatus(`Cleaning ${list.length > 1 ? `${i + 1} of ${list.length}` : 'the still'}… this can take 10–30 seconds.`);
+      try{ made.push(await aiClean(list[i], ai.abort.signal)); renderGallery(); }
+      catch(err){
+        if(err.name === 'AbortError') break;
+        failed++; lastErr = err.message || String(err);
+        if(list.length === 1 || /api key|permission|quota|exhausted|billing/i.test(lastErr)) break;
+      }
+    }
+  }finally{
+    const stopped = ai.abort.signal.aborted;
+    ai.abort = null; $('#aiGo').disabled = false; $('#aiCancel').textContent = 'Close';
+    renderGallery();
+    if(made.length && !failed){
+      $('#ai').hidden = true;
+      if(ai.fromLb && made.length === 1){ lbIndex = orderedStills().indexOf(made[0]); renderLb(); toast('Captions removed. Hold O to compare with the original.'); }
+      else toast(`Captions removed from ${made.length} still${made.length === 1 ? '' : 's'}${stopped ? ' (stopped)' : ''}`, $('#stillsView').hidden ? { action: 'View', onAction: () => showTab('stills') } : {});
+    } else if(stopped) aiStatus(made.length ? `Stopped. ${made.length} still${made.length === 1 ? '' : 's'} cleaned.` : 'Stopped.');
+    else if(failed) aiStatus(`${made.length ? `${made.length} cleaned, ${failed} failed. ` : ''}${lastErr}`, true);
+  }
+});
 
 /* ── toast ── */
 let toastTimer = null, toastExpire = null;
