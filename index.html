@@ -71,7 +71,8 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 /* ── shell ── */
 .app{
   height:100%;display:grid;gap:1px;background:var(--line);
-  grid-template-columns:300px minmax(0,1fr) 290px;
+  --lw:300px;--rw:290px;
+  grid-template-columns:var(--lw) minmax(0,1fr) var(--rw);
   grid-template-rows:52px minmax(0,1fr) 236px;
   grid-template-areas:"top top top" "left center right" "tl tl tl";
 }
@@ -366,10 +367,20 @@ select.sel{background:var(--panel-2);border:1px solid var(--line);border-radius:
 .tl{grid-area:tl;display:flex;flex-direction:column}
 .app.tl-off{grid-template-rows:52px minmax(0,1fr)}
 /* hide / show side panels */
-.app.left-off{grid-template-columns:minmax(0,1fr) 290px;grid-template-areas:"top top" "center right" "tl tl"}
-.app.right-off{grid-template-columns:300px minmax(0,1fr);grid-template-areas:"top top" "left center" "tl tl"}
+.app.left-off{grid-template-columns:minmax(0,1fr) var(--rw);grid-template-areas:"top top" "center right" "tl tl"}
+.app.right-off{grid-template-columns:var(--lw) minmax(0,1fr);grid-template-areas:"top top" "left center" "tl tl"}
 .app.left-off.right-off{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "center" "tl"}
 .app.left-off .left,.app.right-off .right{display:none}
+/* drag a panel's inner edge to resize it */
+.app > .sizer{z-index:5;width:9px;background:transparent;cursor:col-resize;touch-action:none;position:relative}
+.sizer.l{grid-area:left;justify-self:end;margin-right:-5px}
+.sizer.r{grid-area:right;justify-self:start;margin-left:-5px}
+.sizer::after{content:"";position:absolute;inset:0 4px;background:transparent;transition:background .15s}
+.sizer:hover::after,.sizer.on::after,.sizer:focus-visible::after{background:var(--muted)}
+.sizer:focus-visible{outline:none}
+.app.left-off .sizer.l,.app.right-off .sizer.r{display:none}
+body.sizing{cursor:col-resize;user-select:none}
+body.sizing iframe,body.sizing video{pointer-events:none}
 .ptgl[aria-pressed="false"]{color:var(--faint)}
 .ptgl[aria-pressed="true"]{color:var(--text)}
 .app.tl-off .tl{display:none}
@@ -426,6 +437,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
 
 /* ── narrow screens: stack everything, page scrolls ── */
 @media (max-width:980px){
+  .app > .sizer{display:none}
   .app.left-off,.app.right-off,.app.left-off.right-off{grid-template-columns:minmax(0,1fr);grid-template-areas:"top" "center" "tl" "left" "right"}
   body{overflow:auto}
   .app{height:auto;min-height:100%;grid-template-columns:minmax(0,1fr);grid-template-rows:auto;
@@ -727,6 +739,9 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
       <ul class="outs" id="outs"></ul>
     </div>
   </aside>
+
+  <div class="sizer l" role="separator" aria-orientation="vertical" aria-label="Resize the Clips panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
+  <div class="sizer r" role="separator" aria-orientation="vertical" aria-label="Resize the Export panel" tabindex="0" title="Drag to resize · double-click to reset"></div>
 
   <!-- timeline -->
   <section class="tl" aria-label="Timeline">
@@ -2219,11 +2234,50 @@ function setPanel(side, on){
   document.querySelector('.app').classList.toggle(side + '-off', !on);
   $(`#${side}Toggle`)?.setAttribute('aria-pressed', on);
   try{ localStorage.setItem('clipcutter-' + side, on ? '1' : '0'); }catch(e){}
+  if(on) setPanelWidth(side, panelWidth(side));
   requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); });
 }
 const panelOn = side => !document.querySelector('.app').classList.contains(side + '-off');
 $('#leftToggle').addEventListener('click', () => setPanel('left', !panelOn('left')));
 try{ if(localStorage.getItem('clipcutter-left') === '0') setPanel('left', false); }catch(e){}
+/* Drag the edge of a side panel to resize it; widths are remembered. */
+const PANEL_W = { left:300, right:290 }, PANEL_MIN = 220, CENTER_MIN = 520;
+function panelWidth(side){ return parseFloat(getComputedStyle($('.app')).getPropertyValue(side === 'left' ? '--lw' : '--rw')) || PANEL_W[side]; }
+function setPanelWidth(side, w, save){
+  const app = $('.app'), other = side === 'left' ? 'right' : 'left';
+  const room = app.clientWidth - CENTER_MIN - (panelOn(other) ? panelWidth(other) : 0);
+  w = Math.round(Math.max(PANEL_MIN, Math.min(w, Math.max(PANEL_MIN, room))));
+  app.style.setProperty(side === 'left' ? '--lw' : '--rw', w + 'px');
+  if(save) try{ localStorage.setItem('stills-w-' + side, String(w)); }catch(e){}
+  return w;
+}
+document.querySelectorAll('.sizer').forEach(h => {
+  const side = h.classList.contains('l') ? 'left' : 'right';
+  let raf = 0;
+  const relayout = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { if(state.duration) drawRuler(); layoutCrop(); }); };
+  h.addEventListener('pointerdown', e => {
+    if(e.button !== 0) return;
+    e.preventDefault(); h.setPointerCapture(e.pointerId);
+    h.classList.add('on'); document.body.classList.add('sizing');
+    const rect = $('.app').getBoundingClientRect();
+    const move = ev => { setPanelWidth(side, side === 'left' ? ev.clientX - rect.left : rect.right - ev.clientX); relayout(); };
+    const up = () => {
+      h.classList.remove('on'); document.body.classList.remove('sizing');
+      h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up);
+      setPanelWidth(side, panelWidth(side), true);
+    };
+    h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+  });
+  h.addEventListener('dblclick', () => { setPanelWidth(side, PANEL_W[side], true); relayout(); });
+  h.addEventListener('keydown', e => {
+    if(e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault(); e.stopPropagation();
+    const step = (e.shiftKey ? 40 : 10) * (e.key === 'ArrowRight' ? 1 : -1) * (side === 'left' ? 1 : -1);
+    setPanelWidth(side, panelWidth(side) + step, true); relayout();
+  });
+});
+try{ ['left','right'].forEach(side => { const w = +localStorage.getItem('stills-w-' + side); if(w) setPanelWidth(side, w); }); }catch(e){}
+addEventListener('resize', () => ['left','right'].forEach(side => { if(panelOn(side)) setPanelWidth(side, panelWidth(side)); }));
 /* Export settings live in the right panel, shown only while you're exporting. */
 function setExportPanel(on){
   setPanel('right', on);
