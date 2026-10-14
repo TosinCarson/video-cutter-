@@ -151,6 +151,7 @@ svg.i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-widt
 .caprow{display:flex;align-items:center;gap:8px}
 .caprow .chk{flex:1}
 .caprow .btn{height:26px;padding:0 10px;font-size:11.5px}
+#capAi{height:28px;font-size:11.5px;padding:0 10px}
 .cropframe{position:absolute;border:2px solid var(--clip);box-shadow:0 0 0 9999px rgba(0,0,0,.6);pointer-events:auto;touch-action:none;border-radius:2px}
 .cropframe.drag-x{cursor:ew-resize}
 .cropframe.drag-y{cursor:ns-resize}
@@ -560,6 +561,7 @@ body.dragging-still,body.dragging-still *{cursor:grabbing!important;user-select:
         <label class="chk" title="Fills burned-in caption text from nearby frames, then from the surroundings"><input type="checkbox" id="capOn"> Remove captions</label>
         <button class="btn ghost" id="capSet" title="Draw the area where captions appear">Set area</button>
       </div>
+      <button class="btn ghost" id="capAi" title="Remove captions from the selected stills with Nano Banana (Google Gemini)">Remove captions with AI (Nano Banana)</button>
       <span class="sub" id="sqDesc" hidden></span>
       <div class="auto-btns">
         <button class="btn magic" id="bmGo" disabled title="Score frames and keep the best few"><svg class="i" viewBox="0 0 24 24"><path d="M12 2l1.9 5.6L19.5 9.5 13.9 11.4 12 17l-1.9-5.6L4.5 9.5l5.6-1.9zM19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9zM5 15l.7 1.8 1.8.7-1.8.7L5 20l-.7-1.8-1.8-.7 1.8-.7z"/></svg>Best moments</button>
@@ -2665,6 +2667,12 @@ $('#aiCancel').addEventListener('click', closeAi);
 $('#ai').addEventListener('click', e => { if(e.target === e.currentTarget && !ai.abort) closeAi(); });
 $('#gAi').addEventListener('click', () => openAi(orderedStills().filter(s => s.sel)));
 $('#lbAi').addEventListener('click', () => openAi([lbStill()], true));
+$('#capAi').addEventListener('click', () => {
+  const sel = orderedStills().filter(s => s.sel);
+  if(sel.length){ openAi(sel); return; }
+  showTab('stills');
+  toast(stills.length ? 'Select the stills to clean, then press Remove captions (AI).' : 'Grab a still first (S or Grab frame), then select it.');
+});
 
 // draw the area on the preview
 let aiDrag = null;
